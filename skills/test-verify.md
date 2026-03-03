@@ -1,141 +1,107 @@
-# test-verify
+# test-verify — Test & Verification
 
-**Spec-mapped test generation and verification skill.**
+Analyzes project spec and code to generate test cases, run tests, and produce a verification report. Supports unit, integration, and E2E tests.
 
-Generates test cases derived directly from specification requirements, executes them, and produces a verification report mapping test results back to functional requirements.
+## Arguments
 
----
+| Argument | Action |
+|----------|--------|
+| (none) | Ask user for scope, then generate |
+| `unit` | Unit tests only |
+| `integration` | Integration tests only |
+| `e2e` | E2E / manual verification guide |
+| `all` | Generate all test types |
+| `verify` | Run existing tests + produce verification report against checklist |
 
-## Purpose
+## Procedure
 
-Tests written without reference to specifications are incomplete by definition. They test what the developer thought of, not what the system requires. This skill closes that gap by treating the specification as the single source of truth for test generation.
+### Phase 1: Analysis & Environment Setup
 
----
+1. **Detect test framework**: Read package.json → identify Vitest/Jest/Playwright/Cypress
+   - If none found: ask user which to install (Vitest recommended)
+   - Auto-install, create config, add test scripts
 
-## Trigger
+2. **Parse spec documents**:
+   - `docs/spec/spec.md` → feature list, state flows, per-page behavior
+   - `docs/plan/plan.md` → implemented steps
+   - `docs/plan/checklist.md` → verification items (**assertion mapping source**)
 
-Activated during:
-- Phase 5 (Test) of the dev-workflow
-- Manual invocation for targeted test generation
-- Post-fix verification after review findings are addressed
+3. **Checklist → assertion mapping**: Classify each item as automatable vs. manual verification
 
----
+4. **Source code analysis**: Extract functions/components, identify mock targets, error handling paths
 
-## Actions
+5. **Prepare test fixtures**: Create `__fixtures__/` or `__testdata__/` with minimal samples
 
-### 1. Parse Specification
+### Phase 2: Test Case Generation
 
-Read `spec.md` and extract:
-- Functional requirements (each becomes a test target)
-- Acceptance criteria (each becomes a test assertion)
-- Edge cases (each becomes a boundary test)
-- Error scenarios (each becomes a negative test)
-- Data constraints (each becomes a validation test)
+**Priority order:**
+1. Core data pipeline (input → processing → output)
+2. Data integrity (transformation correctness)
+3. Error handling (invalid input, failure paths)
+4. UI interaction (rendering, events)
+5. Performance (benchmarks)
 
-### 2. Generate Test Matrix
+**Assertion rules:**
+- Must use **concrete expected values from spec/checklist** — no vague assertions
+- Reference checklist item number in `it()` descriptions: `(checklist #N)`
+- Numeric precision: specify decimal places explicitly
 
-Create a mapping table:
+**Unit tests**: Happy path → error cases → edge cases (null, empty, min/max, unicode) per function/component
 
-```markdown
-| Spec Requirement | Test Type | Test Description | Status |
-|-----------------|-----------|------------------|--------|
-| FR-001: User login | Unit | Validate credentials against DB | Pending |
-| FR-001: User login | Unit | Reject invalid password | Pending |
-| FR-001: User login | Integration | Full login flow with session | Pending |
-| FR-002: Rate limiting | Unit | Block after N attempts | Pending |
-| FR-002: Rate limiting | E2E | Rate limit resets after timeout | Pending |
-```
+**Integration tests**: API endpoint request/response, state transitions, data pipeline end-to-end (with mocks for external deps)
 
-### 3. Generate Test Code
+**E2E tests / Manual verification guide**: If Playwright/Cypress configured → generate test files. Otherwise → generate manual verification guide with step-by-step scenarios.
 
-For each entry in the test matrix, generate executable test code:
+**Performance tests** (if checklist specifies performance targets):
+- Use `vitest bench` or 3-measurement median approach
+- Allow ±50% margin for CI/local environment differences
+- Separate files: `*.bench.ts`
 
-- **Unit tests:** Test individual functions/methods in isolation
-- **Integration tests:** Test component interactions and data flow
-- **E2E tests:** Test complete user workflows end-to-end
+### Phase 3: Test Execution
 
-Test code follows the project's existing test framework and conventions. If no test framework is established, recommend one based on the technology stack.
+Run project test command (e.g., `npm test`, `npx vitest run`). Capture results.
 
-### 4. Execute Tests
-
-Run the full test suite and capture:
-- Pass/fail status for each test
-- Error messages for failures
-- Execution time
-- Coverage metrics (if tooling is available)
-
-### 5. Generate Verification Report
-
-Produce `verification-report.md`:
+### Phase 4: Verification Report
 
 ```markdown
-# Verification Report
+## Verification Report
 
-**Project:** <project name>
-**Date:** <ISO date>
-**Spec Version:** <spec hash or date>
+### 1. Test Results
+| Type | Total | Pass | Fail | Skip |
+|------|-------|------|------|------|
 
-## Summary
-- Total requirements: <N>
-- Requirements with test coverage: <N>
-- Requirements without coverage: <N>
-- Tests passed: <N>/<total>
-- Tests failed: <N>/<total>
+### 2. Coverage (if available)
+| Metric | Value |
 
-## Coverage Matrix
-| Requirement | Tests | Pass | Fail | Coverage |
-|-------------|-------|------|------|----------|
-| FR-001 | 3 | 3 | 0 | Full |
-| FR-002 | 2 | 1 | 1 | Partial |
+### 3. Failure Details
+#### Failure #1: [test name]
+- File, error, root cause analysis, fix suggestion
 
-## Failures
-### FR-002: Rate limiting — Block after N attempts
-- **Expected:** Request rejected after 5 failed attempts
-- **Actual:** Request accepted on 6th attempt
-- **Root cause:** Off-by-one error in attempt counter
-- **Severity:** Major
+### 4. Checklist Progress
+- Total items: N, Checked: N (N%)
 
-## Uncovered Requirements
-- NFR-003: Response time < 200ms (requires performance testing tooling)
+### 5. Spec Compliance
+| Feature | Tests Exist | Tests Pass | Notes |
 
-## Recommendation
-<overall assessment and recommended next steps>
+### 6. Verdict: PASS / FAIL / CONDITIONAL_PASS
 ```
 
----
-
-## Test Classification
-
-| Type | Scope | Speed | When to Use |
-|------|-------|-------|-------------|
-| **Unit** | Single function/method | Fast (ms) | Every requirement with testable logic |
-| **Integration** | Component interaction | Medium (s) | Data flow, API contracts, DB operations |
-| **E2E** | Full user workflow | Slow (s-min) | Critical user paths, acceptance criteria |
-
-### Coverage Priority
-
-1. **Critical path first:** Test the primary success scenarios before edge cases
-2. **Spec-mapped:** Every test must trace back to a spec requirement
-3. **Failure modes:** Test what should fail, not just what should succeed
-4. **Boundary conditions:** Test limits defined in the spec (max length, min value, etc.)
-
----
+**Verdict criteria:**
+- **PASS**: All tests pass, checklist automation items 100% complete
+- **CONDITIONAL_PASS**: No P0/P1 failures, P2 failures ≤ 10% (or ≤ 5), core pipeline tests pass
+- **FAIL**: Any of the above not met, or P0/P1 issues exist
 
 ## Output Artifacts
 
-- Test matrix mapping (in `verification-report.md`)
-- Generated test files (in project's test directory)
-- Verification report (`verification-report.md`)
-- Updated `workflow-state.md` with test results
+- Test files: `*.test.ts`, `*.bench.ts`
+- Test fixtures: `__fixtures__/` or `__testdata__/`
+- Manual verification guide: `docs/test/manual-verification.md`
+- Verification report: `docs/test/verification-report.md`
 
----
+## Rules
 
-## Failure Handling
-
-When tests fail:
-1. **Classify the failure:** Is it a test bug or an implementation bug?
-2. **If test bug:** Fix the test, re-run, document the test correction
-3. **If implementation bug:** Document the finding, return to implementation phase to fix
-4. **If spec ambiguity:** Flag the requirement, request clarification, update spec if needed
-
-The skill does not mark the Test phase as complete until all spec-mapped tests pass.
+1. Respect existing test patterns — match project conventions
+2. Test behavior, not implementation details
+3. Minimize mocks — prefer real implementations when possible
+4. Each test must be independently runnable
+5. Auto-detect test framework from package.json

@@ -1,158 +1,93 @@
-# dev-workflow
+# dev-workflow — Master Orchestrator
 
-**Core orchestrator skill for the AI-native development workflow.**
+Manages the 6-phase sequential workflow: Plan → Design → Implement → Review → Test → Commit. Validates each phase's completion before allowing progression. **Does not perform work directly** (except Phase 3) — delegates to specialized skills.
 
-Manages the 6-phase sequential development process: Plan → Design → Implement → Review → Test → Commit. Enforces phase ordering, validates transition conditions, and maintains workflow state.
-
----
-
-## Purpose
-
-Provide deterministic, spec-driven project execution by enforcing strict phase sequencing. Prevents AI coding assistants from jumping between tasks without completing prerequisite phases.
-
----
-
-## Trigger
-
-Activated by `/dev-workflow` command with a phase argument:
+## Workflow
 
 ```
-/dev-workflow plan
-/dev-workflow design
-/dev-workflow impl
-/dev-workflow review
-/dev-workflow test
-/dev-workflow commit
+Phase 1        Phase 2        Phase 3        Phase 4        Phase 5        Phase 6
+Plan        →  Design      →  Implement   →  Review      →  Test        →  Commit
+─────────      ─────────      ─────────      ─────────      ─────────      ─────────
+spec.md        plan.md        Write code     Code review    Write tests    Create issues
+system-        checklist.md   Step-by-step   SOLID/Security Run tests      Commit
+design.md                     impl           Quality scan   Verification   Push (opt.)
+migrations/                                  P0-P3 rating   report
 ```
 
----
+## Orchestrator Role
 
-## Phase Definitions
+| Responsibility | `/dev-workflow` | Delegated Skill |
+|---------------|:-:|:-:|
+| Prerequisite validation | O | X |
+| Actual work execution | X (except Phase 3) | O |
+| workflow-state.md update | O | X |
+| Standalone execution | X (workflow only) | O |
 
-### Phase 1: Plan
+## State Tracking
 
-**Objective:** Produce a complete project specification.
+State recorded in `docs/plan/workflow-state.md`. If missing, starts from Phase 1.
 
-**Actions:**
-1. Analyze project requirements (user input, existing codebase, constraints)
-2. Generate `spec.md` using the specification template
-3. Include: functional requirements, non-functional requirements, data models, API contracts, acceptance criteria
-4. Present spec to user for review and approval
+## Commands
 
-**Entry conditions:** None (initial phase)
-**Exit conditions:** User approves `spec.md`
-**Output artifact:** `spec.md`
+| Command | Phase | Delegates To | Output |
+|---------|-------|-------------|--------|
+| `status` (or no arg) | — | — | Current workflow status report |
+| `plan` | 1. Plan | `/web-project-planner plan` | spec.md, system-design.md, migrations/ |
+| `design` | 2. Design | `/web-project-planner design` | plan.md, checklist.md |
+| `impl [step]` | 3. Implement | — (self) | Source code |
+| `review` | 4. Review | `/code-review-expert` + spec compliance | Review report (P0–P3) |
+| `test` | 5. Test | `/test-verify all` | Test files, verification report |
+| `commit` | 6. Commit | `/issue-commit` | GitHub issues, git commit, push |
 
-### Phase 2: Design
+### Phase 1: `plan`
 
-**Objective:** Produce a system design and implementation plan.
+**Prerequisites:** None
+1. Execute `/web-project-planner plan` (Q&A → spec.md, system-design.md, migrations)
+2. Update workflow-state.md (Phase 1 = completed)
+3. Verify: `docs/spec/spec.md`, `docs/architecture/system-design.md`, `docs/schema/` exist
 
-**Actions:**
-1. Read approved `spec.md`
-2. Generate `plan.md` with: architecture decisions, file structure, component breakdown, task sequencing, dependency mapping
-3. Generate `checklist.md` with verification items mapped to spec requirements
-4. Present design to user for review and approval
+### Phase 2: `design`
 
-**Entry conditions:** `spec_approved: true` in workflow state
-**Exit conditions:** User approves `plan.md`
-**Output artifacts:** `plan.md`, `checklist.md`
+**Prerequisites:** Phase 1 complete
+1. Execute `/web-project-planner design` (reads existing spec → plan.md, checklist.md)
+2. Update workflow-state.md (Phase 2 = completed)
+3. Verify: `docs/plan/plan.md`, `docs/plan/checklist.md` exist
 
-### Phase 3: Implement
+### Phase 3: `impl [step]`
 
-**Objective:** Execute the approved implementation plan.
+**Prerequisites:** Phase 2 complete
+1. Read plan.md → identify current step
+2. Read checklist.md → identify check items
+3. Read spec.md → reference detailed spec
+4. Write/modify code per step's file list
+5. Mark completed items as `[x]` in checklist.md
+6. Update workflow-state.md with progress
 
-**Actions:**
-1. Read `plan.md` and execute tasks in order
-2. Track implementation progress in `workflow-state.md`
-3. Flag any deviations from spec immediately
-4. Halt and consult user if implementation conflicts with approved design
+**Rules:** Step-by-step execution. Report after each step. If specific step number given, implement only that step. On error, use `/log-error` format.
 
-**Entry conditions:** `plan_approved: true` in workflow state
-**Exit conditions:** All planned tasks complete, no known spec deviations
-**Output artifacts:** Implementation code, updated `workflow-state.md`
+### Phase 4: `review`
 
-### Phase 4: Review
+**Prerequisites:** At least 1 step implemented
+1. **Spec compliance review** (orchestrator's own task): compare spec.md vs. implementation
+2. **Code quality review:** delegate to `/code-review-expert` (SOLID, security, P0–P3)
+3. P0/P1 found → guide to fix and re-review. No P0/P1 → Phase 4 = completed
 
-**Objective:** Structured code review against specification.
+### Phase 5: `test`
 
-**Actions:**
-1. Compare implementation against `spec.md` requirements point by point
-2. Check for: SOLID violations, security risks, error handling gaps, edge cases, naming consistency
-3. Produce review findings with severity ratings (critical, major, minor)
-4. Fix all critical and major findings before proceeding
+**Prerequisites:** Phase 4 complete
+1. Execute `/test-verify all`
+2. PASS → Phase 5 = completed. CONDITIONAL_PASS → confirm with user. FAIL → guide to fix
 
-**Entry conditions:** `impl_complete: true` in workflow state
-**Exit conditions:** No critical or major review findings remaining
-**Output artifacts:** Review report, code fixes
+### Phase 6: `commit`
 
-### Phase 5: Test
+**Prerequisites:** Phase 5 complete
+1. Execute `/issue-commit` (git pull → error docs → GitHub issues → commit → push)
+2. Update workflow-state.md (Phase 6 = completed)
+3. Produce completion report
 
-**Objective:** Spec-mapped test generation and execution.
+## Rules
 
-**Actions:**
-1. Read `spec.md` acceptance criteria
-2. Generate test cases: unit tests, integration tests, e2e tests as appropriate
-3. Map every functional requirement to at least one test case
-4. Execute tests and produce verification report
-5. Fix failing tests (distinguish between test bugs and implementation bugs)
-
-**Entry conditions:** `review_passed: true` in workflow state
-**Exit conditions:** All spec-mapped tests passing
-**Output artifacts:** Test files, verification report
-
-### Phase 6: Commit
-
-**Objective:** Structured commit with full traceability.
-
-**Actions:**
-1. Generate commit message following conventional commit format
-2. Create GitHub issues for completed work items
-3. Link commits to issues
-4. Update `workflow-state.md` to mark workflow complete
-5. Produce summary of all artifacts created
-
-**Entry conditions:** `tests_passed: true` in workflow state
-**Exit conditions:** Code committed, issues created
-**Output artifacts:** Git commits, GitHub issues, final `workflow-state.md`
-
----
-
-## State Management
-
-The skill reads and writes `workflow-state.md` to track progress:
-
-```yaml
-project: <project-name>
-current_phase: plan | design | implement | review | test | commit
-spec_approved: true | false
-plan_approved: true | false
-design_approved: true | false
-impl_complete: true | false
-review_passed: true | false
-tests_passed: true | false
-committed: true | false
-started_at: <ISO timestamp>
-last_updated: <ISO timestamp>
-```
-
-**State transitions are one-directional.** A phase cannot be "unapproved" once approved. If requirements change mid-workflow, a new workflow cycle begins.
-
----
-
-## Error Handling
-
-- **Missing prerequisite:** If a phase is invoked without its entry conditions met, the skill reports which conditions are unmet and which phase must be completed first.
-- **State file missing:** If `workflow-state.md` doesn't exist and a non-Plan phase is invoked, the skill creates an initial state and directs the user to start with Plan.
-- **Spec deviation detected:** During implementation, if the AI detects a conflict between the plan and what's feasible, it halts and reports the deviation for user decision.
-
----
-
-## Configuration
-
-Future versions will support `.dev-workflow.yaml` for:
-- Phase customization (skip/combine phases for specific project types)
-- Custom validation hooks
-- Team-specific review criteria
-- Integration with external tools
-
-Currently, the workflow operates with default settings as documented above.
+1. **No skipping phases.** Block if prior phase is incomplete.
+2. **Mandatory state updates.** Update workflow-state.md at every phase transition.
+3. **Incremental progress.** Confirm with user between phases.
+4. **git pull first.** Sync latest code before every phase.

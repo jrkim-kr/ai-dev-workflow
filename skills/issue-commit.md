@@ -1,128 +1,88 @@
-# issue-commit
+# issue-commit — Issue, Commit & Push
 
-**Issue creation and commit automation skill.**
+Handles error documentation, GitHub issue creation, and commit message generation in one sequential workflow. **Phases must execute in order: 0 → 1 → 2 → 3 → 4. No skipping.**
 
-Generates structured GitHub issues for completed work items and produces conventional commit messages with full traceability to specifications and implementation plans.
+## Phases
 
----
+### Phase 0: Pre-flight (mandatory)
 
-## Purpose
+1. **Sync latest code**: `git pull`
+2. **Check branch status**: `git status`, `git log --oneline -5`
+3. **Report to user**: current branch, sync status, uncommitted changes
 
-The final mile of disciplined development is documentation. Code without linked issues is untraceable. Commits without structured messages are unsearchable. This skill ensures every piece of completed work is properly documented, linked, and discoverable.
+### Phase 1: Error Documentation
 
----
-
-## Trigger
-
-Activated during:
-- Phase 6 (Commit) of the dev-workflow
-- Manual invocation for mid-workflow commits (with explicit user approval)
-- Error documentation that requires an issue
-
----
-
-## Actions
-
-### 1. Analyze Changes
-
-Review all changes since the last commit:
-- Files modified, added, or deleted
-- Functional requirements addressed (cross-reference with `spec.md`)
-- Plan tasks completed (cross-reference with `plan.md`)
-
-### 2. Generate GitHub Issues
-
-For each logical unit of work, create an issue with:
+1. Analyze error: root cause, reproduction steps, context
+2. Check existing error docs in `<project>/errors/` to avoid duplicates
+3. Create/update error doc:
 
 ```markdown
-Title: <concise description of the work item>
+# [ERROR_CODE] Short Description
 
-## Description
-<what was implemented and why>
+## Summary
+One-line description.
 
-## Spec Reference
-- Requirement: <spec requirement ID or description>
-- Acceptance Criteria: <relevant criteria from spec>
+## Root Cause
+Technical explanation.
 
-## Implementation Details
-- Files changed: <list of files>
-- Approach: <brief technical description>
+## Reproduction Steps
+1. Step 1 ...
 
-## Verification
-- [ ] Tests passing
-- [ ] Review completed
-- [ ] Spec compliance verified
+## Solution
+How to fix or prevent.
+
+## Prevention Checklist
+- [ ] Specific check items
+
+## Related Files
+- `path/to/file.js` — description
 ```
 
-**Issue labeling:**
-- `feature` — New functionality
-- `fix` — Bug fix
-- `refactor` — Code improvement without behavior change
-- `docs` — Documentation update
-- `test` — Test addition or modification
+**File naming:** `ERR-001-brief-description.md`
 
-### 3. Generate Commit Messages
+**Error code ranges:**
+- ERR-001–099: DOM/Selector
+- ERR-100–199: Network/API
+- ERR-200–299: Data parsing
+- ERR-300–399: Authentication
+- ERR-400–499: Channel-specific
 
-Produce commit messages in conventional format:
+### Phase 2: GitHub Issue Creation (for all change types)
 
-```
-type(scope): concise description
+Create issues for **all changes** — not just bugs. Features, refactors, docs, all types.
 
-- Detail 1: what was done and why
-- Detail 2: additional context if needed
+- Use `gh issue create` in the current repository
+- Record issue number for commit message references
 
-Closes #<issue-number>
-Refs: spec.md#<requirement>
-```
+**Issue format by type:**
 
-**Commit types:**
-- `feat` — New feature
-- `fix` — Bug fix
-- `refactor` — Code restructuring
-- `test` — Test changes
-- `docs` — Documentation changes
-- `chore` — Build, config, tooling changes
+| Type | Title Format | Label |
+|------|-------------|-------|
+| Bug fix | `[ERROR_CODE] Short Description` | `bug` |
+| Feature | `feat(scope): Short Description` | `enhancement` |
+| Refactor | `refactor(scope): Short Description` | `refactor` |
+| Docs | `docs(scope): Short Description` | `documentation` |
 
-### 4. Suggest Bilingual Messages (Optional)
+### Phase 3: Commit
 
-When enabled, provide commit messages in both English and the team's local language:
+1. Analyze changes: `git diff HEAD`, `git diff --cached`, `git status`
+2. Group by independent project/area
+3. Generate conventional commit messages
+4. Present **both English and local language** messages to user
+5. **Commit with English message**
+6. Reference issues: `Closes #N` or `Refs #N`
 
-```
-feat(auth): implement JWT token refresh mechanism
+**Commit guidelines:**
+- First line ≤ 72 characters
+- English uses imperative ("add" not "added")
+- Include `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
 
-- Add automatic token refresh 5 minutes before expiry
-- Handle refresh failure with graceful session termination
-- Store refresh tokens in httpOnly secure cookies
+### Phase 4: Push (requires user approval)
 
-Closes #42
-```
+1. Present commit summary (files, messages, issue numbers, branch)
+2. Ask user: Push / Don't push / Push to different branch
+3. Execute `git push` only if approved
 
----
+## Fail-safe
 
-## Output Artifacts
-
-- GitHub issues (created via `gh` CLI or API)
-- Structured commit messages
-- Updated `workflow-state.md` with commit references
-
----
-
-## Validation
-
-Before committing, the skill verifies:
-1. All changes are staged
-2. No untracked files that should be included
-3. Commit message accurately reflects the changes
-4. Referenced issues exist (or will be created)
-5. Workflow state allows committing (all prior phases complete)
-
----
-
-## Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `auto_create_issues` | `true` | Automatically create GitHub issues |
-| `bilingual_messages` | `false` | Generate messages in two languages |
-| `issue_labels` | `auto` | Auto-detect labels from change type |
-| `link_to_spec` | `true` | Include spec references in issues |
+If no changes to commit, inform user that working directory is clean.

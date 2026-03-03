@@ -43,13 +43,15 @@ last_updated: "[YYYY-MM-DDTHH:MM:SSZ]"
 
 | Artifact | Phase | Path | Status |
 |----------|-------|------|--------|
-| spec.md | Plan | ./spec.md | pending |
-| plan.md | Design | ./plan.md | pending |
-| checklist.md | Design | ./checklist.md | pending |
-| Implementation | Implement | ./src/ | pending |
-| Review Report | Review | ./review-report.md | pending |
-| Test Suite | Test | ./tests/ | pending |
-| Verification Report | Test | ./verification-report.md | pending |
+| spec.md | Plan | docs/spec/spec.md | pending |
+| system-design.md | Plan | docs/architecture/system-design.md | pending |
+| migrations/ | Plan | docs/schema/migrations/ | pending |
+| plan.md | Design | docs/plan/plan.md | pending |
+| checklist.md | Design | docs/plan/checklist.md | pending |
+| Implementation | Implement | src/ | pending |
+| Review Report | Review | — | pending |
+| Test Suite | Test | tests/ | pending |
+| Verification Report | Test | docs/test/verification-report.md | pending |
 
 ---
 

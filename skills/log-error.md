@@ -1,111 +1,56 @@
-# log-error
+# log-error — Error Documentation
 
-**Error documentation skill for preventing recurrence.**
+Documents errors to prevent recurrence. Creates structured error reports and GitHub issues for tracking.
 
-Captures errors encountered during development, documents root causes, and creates reference entries that inform future coding decisions. Turns debugging sessions into institutional knowledge.
+## Workflow
 
----
-
-## Purpose
-
-Errors repeat. The same null reference, the same async timing issue, the same misconfigured environment variable — they come back because no one documented them the first time. This skill ensures every significant error gets documented in a structured format that both humans and AI assistants can reference.
-
----
-
-## Trigger
-
-Activated when:
-- An error is encountered during any workflow phase
-- The user explicitly requests error documentation
-- A recurring error pattern is detected
-
----
-
-## Actions
-
-### 1. Capture Error Context
-
-Collect the following information:
-- **Error message:** Exact error output
-- **Stack trace:** Full trace if available
-- **Environment:** OS, runtime version, relevant configuration
-- **Phase:** Which workflow phase the error occurred in
-- **Trigger:** What action caused the error
-
-### 2. Analyze Root Cause
-
-Determine the root cause by examining:
-- Code that produced the error
-- Configuration state at the time
-- Dependencies and their versions
-- Environmental factors
-
-Classify the root cause:
-- `logic` — Incorrect code logic
-- `config` — Misconfiguration
-- `dependency` — External dependency issue
-- `environment` — Environment-specific problem
-- `data` — Unexpected data format or state
-- `concurrency` — Race condition or timing issue
-
-### 3. Document the Error
-
-Create an error log entry in `docs/errors/` with the following structure:
+1. **Analyze** the error: root cause, reproduction steps, context (function, input values)
+2. **Check** existing error docs in `<project>/errors/` to avoid duplicates
+3. **Create/update** error documentation:
 
 ```markdown
-# Error: <Short Description>
+# [ERROR_CODE] Short Description
 
-**Date:** <ISO date>
-**Phase:** <workflow phase>
-**Category:** <root cause category>
-**Severity:** critical | major | minor
-
-## Error Output
-<exact error message and relevant stack trace>
+## Summary
+One-line description.
 
 ## Root Cause
-<explanation of why the error occurred>
+Technical explanation of why this error occurs.
 
-## Fix
-<what was done to resolve it>
+## Reproduction Steps
+1. Step 1
+2. Step 2
 
-## Prevention
-<how to prevent this error in the future>
+## Solution
+How to fix or prevent this error.
 
-## Related
-<links to related errors, issues, or documentation>
+## Prevention Checklist
+- [ ] Specific check to avoid this error
+
+## Related Files
+- `path/to/file.js` — brief description
 ```
 
-### 4. Cross-Reference
+4. **File naming:** `ERR-001-brief-description.md`
+5. **Create GitHub issue:** `gh issue create --title "[ERROR_CODE] Description" --label "bug"`
 
-- Link the error to the relevant spec requirement (if applicable)
-- Link to the commit that introduced the fix
-- Update any affected templates or checklists to include prevention steps
+## Error Code Ranges
 
----
+| Range | Category |
+|-------|----------|
+| ERR-001–099 | DOM/Selector errors |
+| ERR-100–199 | Network/API errors |
+| ERR-200–299 | Data parsing errors |
+| ERR-300–399 | Authentication errors |
+| ERR-400–499 | Channel-specific errors |
 
-## Output Artifacts
+## When Writing Code
 
-- Error log entry in `docs/errors/{date}-{short-description}.md`
-- Updated checklist items (if prevention steps apply to future development)
+Before implementing any feature or fix:
+1. Check relevant `<project>/errors/` for documented errors
+2. Apply prevention checklists from related error docs
+3. Reference error doc in code comments if directly related
 
----
+## Fail-safe
 
-## Integration with Workflow
-
-During the **Implement** and **Test** phases, the AI assistant should:
-1. Check existing error logs before implementing similar functionality
-2. Reference known error patterns when writing new code
-3. Add prevention checks to test cases for documented error categories
-
-This creates a feedback loop: errors inform tests, tests prevent recurrence.
-
----
-
-## Best Practices
-
-- Document errors immediately, not after the fact
-- Be specific about root causes — "it didn't work" is not a root cause
-- Include the fix, not just the problem
-- Write prevention steps that are actionable, not generic
-- Link errors to spec requirements when the error reveals a spec gap
+If error cannot be fully diagnosed, document what is known and mark `Status: Under Investigation`.
