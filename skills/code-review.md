@@ -130,3 +130,9 @@ Compare implementation against `plan.md`:
 - Annotated findings with file/line references
 - Spec compliance matrix
 - Updated `workflow-state.md`
+
+---
+
+## Acknowledgments
+
+The review dimensions and severity classification in this skill were inspired by [sanyuan0704/sanyuan-skills](https://github.com/sanyuan0704/sanyuan-skills), specifically the `code-review-expert` skill. Its approach to structured code review covering SOLID principles, security analysis, and actionable improvement proposals served as a foundation for this skill's design.

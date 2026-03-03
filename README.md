@@ -257,6 +257,12 @@ This is not a finished product. It's an opinionated starting point designed to g
 
 ---
 
+## Acknowledgments
+
+- The `code-review` skill was inspired by [sanyuan0704/sanyuan-skills](https://github.com/sanyuan0704/sanyuan-skills) and its `code-review-expert` skill for structured, multi-dimensional code review.
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
