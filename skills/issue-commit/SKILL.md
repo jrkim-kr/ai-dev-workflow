@@ -1,284 +1,152 @@
 ---
 name: issue-commit
-description: Document errors, create GitHub issues for all changes, and suggest commit messages in English & Korean
+description: End-to-end commit workflow — pull latest, auto-detect change type/scope, document errors (for bugs), create GitHub issues in English, generate bilingual (English + Korean) commit messages, and push. Use this skill whenever the user wants to commit changes, create an issue for their work, document an error, or run the full issue-commit-push pipeline. Trigger on phrases like "커밋해 줘", "이슈 만들어", "commit this", "create an issue and commit", "에러 문서화", or any request combining issue creation with committing.
 user-invokable: true
 disable-model-invocation: false
 ---
 
 You handle error documentation, GitHub issue creation, and commit message generation — all in one workflow.
 
-**You MUST follow the order PHASE 0 → PHASE 1 → PHASE 2 → PHASE 3 → PHASE 4. No phase may be skipped.**
+**Phase order: 0 → 1 (fix only) → 2 → 3 → 4. No phase may be skipped except PHASE 1.**
 
 ---
 
-# PHASE 0: Pre-Work Process (Required)
+# PHASE 0: Pre-Work + Analysis
 
-Before starting any work, **always** perform the following steps. This phase must not be skipped.
+Run all git commands in a single call to minimize tool calls:
 
-## Workflow
+```bash
+git pull && git status && git log --oneline -5
+```
 
-1. **Sync latest code:**
-   ```bash
-   git pull
-   ```
-   - If conflicts arise, inform the user and guide resolution
-   - If pull fails, diagnose the cause and report to user
+If conflicts or pull failure, inform user and guide resolution.
 
-2. **Check current branch status:**
-   ```bash
-   git status
-   git log --oneline -5
-   ```
-   - Alert the user if there are uncommitted changes
-   - Verify the current working branch is correct
+Then analyze `git diff HEAD` to infer **change type** and **scope**:
 
-3. **Report status to user:**
-   - Current branch name
-   - Whether latest sync is complete
-   - Whether there are uncommitted changes
+**Change type inference:**
+- New files → `feat` | Only `.md` → `docs` | Formatting only → `style` | Test files → `test`
+- Bug fixes (error handling, null checks) → `fix` | Restructuring → `refactor`
+- Build/config/deps → `chore` | Performance → `perf`
 
-> **This phase must be completed before proceeding to the next phase (error documentation, issue creation, commit).**
+**Scope inference from file paths:**
+- `hotel-price-updater/...` → `price-updater`
+- `unified_extension/popup.*` → `popup` | `unified_extension/content/...` → `content` | `unified_extension/background.*` → `background`
+- Root-level → omit scope | Multiple dirs in same project → project-level scope
+- If ambiguous, ask the user
+
+Present detected type and scope to user for confirmation, then proceed.
 
 ---
 
-# PHASE 1: ERROR DOCUMENTATION
+# PHASE 1: ERROR DOCUMENTATION (Only for `fix` type — skip otherwise)
 
-## Workflow
-
-1. **Analyze the error:**
-   - Identify root cause
-   - Determine reproduction steps
-   - Record context (channel, function, input values)
-
-2. **Check existing error docs** (in `errors/` to avoid duplicates):
-   - Search the project's `errors/` directory for existing error documents
-
-3. **Create/update error documentation** (in the appropriate `<project>/errors/`):
+1. Analyze the error: root cause, reproduction steps, context
+2. Auto-discover error doc directories:
+   ```bash
+   find . -type d -name "errors" -not -path "*/node_modules/*"
+   ```
+3. Create error doc in `<project>/errors/ERR-NNN-brief-description.md`:
 
 ```markdown
 # [ERROR_CODE] Short Description
-
 ## Summary
-One-line description of the error.
-
 ## Root Cause
-Technical explanation of why this error occurs.
-
 ## Reproduction Steps
-1. Step 1
-2. Step 2
-3. ...
-
 ## Solution
-How to fix or prevent this error.
-
 ## Prevention Checklist
-- [ ] Specific check to avoid this error
-- [ ] Another check if applicable
-
 ## Related Files
-- `path/to/file.js` - brief description
 ```
 
-4. **Filename convention:** `ERR-001-brief-description.md`
+**Error code ranges:** 001-099 DOM/Selector | 100-199 Network/API | 200-299 Data parsing | 300-399 Auth | 400-499 Channel-specific
 
-## Error Code Ranges
-
-- ERR-001 ~ ERR-099: DOM/Selector errors
-- ERR-100 ~ ERR-199: Network/API errors
-- ERR-200 ~ ERR-299: Data parsing errors
-- ERR-300 ~ ERR-399: Authentication errors
-- ERR-400 ~ ERR-499: Channel-specific errors
-
-## Fail-Safe
-
-If an error cannot be fully diagnosed, document what is known and mark it as `Status: Under Investigation`.
+If diagnosis is incomplete, mark `Status: Under Investigation`.
 
 ---
 
-# PHASE 2: GITHUB ISSUE CREATION (Required for all change types)
+# PHASE 2: GITHUB ISSUE CREATION
 
-Create a GitHub Issue for **all changes** — not just errors/bugs, but also new features, refactoring, documentation changes, and more.
+Create a GitHub Issue for **all changes**. **All issues in English.**
 
-## Issue Creation Rules
+**Title format:** `type(scope): short description` (append `[ERR-NNN]` for bugs with error docs)
 
-- Use `gh issue create` to create an issue in the current repository
-- Record the issue number after creation (e.g., `#12`) — used for commit message references
+**Pre-creation checks** — run in parallel in a single call:
+```bash
+gh issue list --search "keyword" --state open --limit 10 && gh label list | grep -q "label-name" || gh label create "label-name" --color "ededed"
+```
+If duplicate found, ask user whether to reference existing or create new.
 
-## Issue Format by Change Type
+**Issue creation:**
+```bash
+gh issue create --title "type(scope): description" --body "..." --label "label" --assignee @me
+```
 
-### Bug/Error Fix (fix)
-- Title: `[ERROR_CODE] Short Description` (if error doc exists)
-- Label: `bug`
-- Body: Include Summary, Root Cause, Solution from error doc
+**Labels:** fix→`bug` | feat→`enhancement` | refactor→`refactor` | docs→`documentation` | style→`style` | test→`test` | chore→`chore` | perf→`performance`
 
-### New Feature (feat)
-- Title: `feat(scope): Short Description`
-- Label: `enhancement`
-- Body: Feature description, changes made, related files
-
-### Refactoring (refactor)
-- Title: `refactor(scope): Short Description`
-- Label: `refactor`
-- Body: Refactoring rationale, changes made
-
-### Documentation (docs)
-- Title: `docs(scope): Short Description`
-- Label: `documentation`
-- Body: Description of documentation changes
-
-### Other (chore, style, test, perf)
-- Title: `type(scope): Short Description`
-- Label: appropriate label for the type (omit if none exists)
-- Body: Summary of changes
-
-## Body Template
-
+**Body template:**
 ```markdown
 ## Summary
-Brief description of the changes.
-
 ## Changes
-- Change 1
-- Change 2
-
 ## Related Files
-- `path/to/file` - description
 ```
+For `fix`, also include Root Cause and Solution from error doc.
 
-## Examples
-
-```bash
-# New feature
-gh issue create --title "feat(slack): add per-channel Slack notifications" \
-  --body "## Summary\n..." \
-  --label "enhancement"
-
-# Bug fix
-gh issue create --title "[ERR-101] API timeout on search request" \
-  --body "## Summary\n..." \
-  --label "bug"
-```
+Record the issue number for commit references.
 
 ---
 
-# PHASE 3: COMMIT (Commit in English, show both English & Korean)
+# PHASE 3: COMMIT (English commit, show both English & Korean)
 
-## Workflow
+PHASE 0 already analyzed the diff — reuse that analysis here. Do NOT re-run `git diff` or `git status` unless changes were made after PHASE 0.
 
-1. **Analyze changes:**
-   - `git diff HEAD` — view all changes
-   - `git diff --cached` — view staged changes only
-   - `git status` — understand overall state
+**Group by project** if changes span multiple directories. Commit order: Root → hotel-price-updater → unified_extension.
 
-2. **Group by logical area:**
-   - If monorepo, classify by package/project directory
-   - Root-level changes (e.g., README.md, configs) grouped separately
-
-3. **Conventional Commits format:**
-   - `feat`: New feature
-   - `fix`: Bug fix
-   - `docs`: Documentation changes
-   - `refactor`: Code refactoring
-   - `style`: Formatting, no code change
-   - `test`: Adding or updating tests
-   - `chore`: Maintenance tasks
-
-4. **Check related GitHub issues:**
-   - Run `gh issue list --state open --limit 20` to check open issues
-   - Include issue references for error-doc-related changes
-   - `Closes #N` — if the commit fully resolves the issue
-   - `Refs #N` — if related but doesn't fully resolve it
-
-5. **Show both English & Korean commit messages to the user, then commit with the English message:**
-   - Stage relevant files with `git add`
-   - Run `git commit` with the English message
-   - If separate commits are needed per project, perform each one
-   - Push is handled in PHASE 4 after user approval
-
-## Output Format
-
-For each logical group, show both English & Korean messages then commit:
+For each group, show both messages then commit:
 
 ```
-## [Folder/Area Name]
-
-### Changes Summary
-- Summary of changes
-
-### Commit Messages
-
-**English (actual commit):**
-type(scope): short description
-
-- Detail 1
-- Detail 2
-
-Closes #N
-
-**Korean (reference):**
-type(scope): short description in Korean
-
-- Detail 1 in Korean
-- Detail 2 in Korean
-
-Closes #N
+**English (commit):** type(scope): description
+**Korean (reference):** type(scope): 한국어 설명
 ```
 
-## Guidelines
-
-- Keep the first line under 72 characters
-- Use imperative mood in English ("add" not "added")
-- Be specific about what changed and why
-- Suggest separate commits for changes spanning unrelated areas
-- Include scope in parentheses (e.g., `feat(yeogi):`, `fix(popup):`)
-- Always include `Closes #N` or `Refs #N` when a related GitHub issue exists
-- Include Co-Authored-By tag: `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
-
-## Commit Order
-
-1. Root (common/shared changes)
-2. Individual packages/projects (alphabetical or dependency order)
+**Guidelines:**
+- First line under 72 chars, imperative mood
+- `Closes #N` or `Refs #N` for related issues
+- `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+- Separate commits for unrelated areas
 
 ---
 
-# PHASE 4: PUSH (Requires user approval)
+# PHASE 4: PUSH + SUMMARY
 
-After committing, ask the user whether to push to the remote repository.
+**1. Execution Summary:**
 
-## Workflow
+```markdown
+| Phase | Result |
+|-------|--------|
+| Pre-Work | branch: `main`, synced, type: `feat(scope)` |
+| Error Doc | Skipped / Created ERR-XXX |
+| Issue | #N — `type(scope): title` |
+| Commit | `type(scope): message` (X files) |
+| Push | (pending) |
+```
 
-1. **Present commit summary:**
-   - Number of committed files, commit messages, related issue numbers
-   - Current branch name and remote branch status
-
-2. **Ask user about push:**
+**2. Ask user about push:**
 
 Use AskUserQuestion:
 - header: "Push"
 - question: "Push to remote repository?"
-- options:
-  - "Push" — Run `git push` on the current branch
-  - "Don't push" — Keep local commits only, push later
-  - "Push to different branch" — Enter branch name manually
+- options: "Push" | "Don't push" | "Push to different branch"
 
-3. **Execute push (if approved):**
-   - Run `git push origin [branch-name]`
-   - If remote branch doesn't exist, use `git push -u origin [branch-name]`
-   - If push fails, diagnose cause and report to user
-
-4. **Report results:**
-   - Push successful: Provide remote URL and commit hash
-   - Push skipped: Inform user they can push later with `git push`
+**3. Execute (if approved):**
+- `git push origin [branch]` (use `-u` if remote branch doesn't exist)
+- Update summary with push result
 
 ---
 
 # WHEN WRITING CODE
 
-Before implementing or modifying code, always:
-1. Check `errors/` for documented errors
+Before implementing or modifying code:
+1. Check `<project>/errors/` for documented errors
 2. Apply prevention checklists from relevant error docs
-3. Reference the error doc in code comments if directly related
 
 # FAIL-SAFE
 
