@@ -2,7 +2,7 @@
 name: test-verify
 description: "Analyze the project's spec.md and code to generate test cases, run automated/manual tests, and produce a verification report. Supports unit, integration, and E2E testing."
 argument-hint: "[unit | integration | e2e | all | verify (optional)]"
-user-invokable: true
+user-invocable: true
 ---
 
 # Test & Verification Skill
@@ -36,9 +36,9 @@ Analyze the project's feature specification (spec.md) and source code to generat
      4. Verify installation (`npm test -- --version` or equivalent)
 
 2. **Analyze spec documents:**
-   - Read `docs/spec/spec.md` → extract feature list, state flows, per-page behaviors
-   - Read `docs/plan/plan.md` → identify implemented steps
-   - Read `docs/plan/checklist.md` → identify verification items (**assertion mapping source**)
+   - Read `docs/spec.md` → extract feature list, state flows, per-page behaviors
+   - Read `docs/checklist.md` → identify implemented steps
+   - Read `docs/checklist.md` → identify verification items (**assertion mapping source**)
 
 3. **checklist.md → assertion mapping analysis:**
    - Parse the "verification method" column from each checklist item
@@ -66,11 +66,11 @@ Analyze the project's feature specification (spec.md) and source code to generat
 
    | Fixture Type | Generation Method | Example |
    |-------------|-------------------|---------|
-   | JSON config files | Copy + modify project built-in files | Valid/invalid config variants |
-   | Minimal data samples | Generate ~10 rows based on actual format | CSV with header, without header, with BOM, etc. |
-   | Database samples | Create in-memory or use test DB | Minimal schema with seed data |
-   | Encoding test files | Various encodings | UTF-8, UTF-16, other project-relevant encodings |
-   | Binary data | Hardcoded typed arrays | Edge case conversions |
+   | JSON config files | Copy + modify project built-in files | Valid/invalid decoder config |
+   | Minimal CSV samples | Generate ~10 rows based on actual format | Header+data, no header, BOM included, etc. |
+   | Minimal SQLite samples | Create in-memory with sql.js | .db with RUN_DATA table |
+   | Mapping files (INFO) | cp949/utf-8 encoding test | Col A=name, Col B=scale |
+   | Binary data | Hardcoded Uint8Array | hex → signed int conversion |
 
    - Reuse existing fixtures if available; generate minimal samples via code if not
    - **Principle:** Fixtures should be minimal — include only rows/columns needed for the test purpose
@@ -95,8 +95,8 @@ Use AskUserQuestion:
 When generating tests, **start with critical paths**:
 
 ```
-Priority 1: Core business logic (critical path functions)
-Priority 2: Data correctness (transformation/calculation results match expected values)
+Priority 1: Core data pipeline (file read → decode → output)
+Priority 2: Data correctness (transformation results match expected values)
 Priority 3: Error handling (invalid input, failure paths)
 Priority 4: UI interactions (rendering, events)
 Priority 5: Performance (benchmarks)
@@ -126,25 +126,25 @@ Assertions must use **concrete expected values from spec.md/checklist.md**. Vagu
 
 ```typescript
 // ❌ BAD — vague assertion
-it('data processing works correctly', () => {
-  const result = processData(input)
+it('bit unpacking works correctly', () => {
+  const result = unpackBitsMSB([0x51])
   expect(result).toBeTruthy()
 })
 
 // ✅ GOOD — concrete assertion based on spec/checklist
-it('parseCSVRow splits comma-separated values correctly (checklist #12)', () => {
-  const result = parseCSVRow('Alice,30,Engineer')
-  expect(result).toEqual(['Alice', '30', 'Engineer'])
+it('MSB unpack: 0x51 → [0,1,0,1,0,0,0,1] (checklist #31)', () => {
+  const result = unpackBitsMSB([0x51])
+  expect(result).toEqual([0,1,0,1,0,0,0,1])
 })
 
 // ✅ GOOD — numeric correctness with decimal precision
-it('calculateDiscount: 1000 * 0.15 = 150.0 (checklist #25)', () => {
-  expect(calculateDiscount(1000, 0.15)).toBeCloseTo(150.0, 2)
+it('scale 10 applied: 1234 / 10 = 123.4 (6 decimal places)', () => {
+  expect(applyScale(1234, 10)).toBeCloseTo(123.4, 6)
 })
 
 // ✅ GOOD — checklist item number reference
-it('formatCurrency: 1234567 → "$1,234,567" (checklist #33)', () => {
-  expect(formatCurrency(1234567)).toBe('$1,234,567')
+it('hex → signed32: 0xFFFFFFFF → -1 (checklist #47)', () => {
+  expect(hexToSigned32('FFFFFFFF')).toBe(-1)
 })
 ```
 
@@ -218,13 +218,14 @@ Separate business logic inside workers into pure functions and test them directl
 
 ```typescript
 // ✅ Separate worker internal logic into pure functions → import and test directly
-import { processData, validateInput } from '@/lib/workers/data-processor'
+// Test scanColumns(), loadData() from src/lib/decoders/decoder-engine.ts
+import { scanColumns, loadData } from '@/lib/decoders/decoder-engine'
 
-describe('data-processor (worker internal logic)', () => {
-  it('processes valid input and returns expected result (checklist #58)', async () => {
-    const input = fixtures.sampleData
-    const result = await processData(input, config)
-    expect(result.items).toHaveLength(10)
+describe('decoder-engine (worker internal logic)', () => {
+  it('returns column list when scanning CSV (checklist #58)', async () => {
+    const csvBuffer = fixtures.turboRawCsv
+    const result = await scanColumns(csvBuffer, turboConfig)
+    expect(result.columns.map(c => c.name)).toContain('coolant outlet temp')
   })
 })
 ```
@@ -234,7 +235,7 @@ Test the Worker Manager's RPC call/response matching logic with a mock Worker.
 
 ```typescript
 // Mock the Worker itself to verify message communication patterns
-vi.mock('./workers/data-processor.worker', () => ({
+vi.mock('./workers/file-process.worker', () => ({
   default: class MockWorker {
     onmessage: ((e: MessageEvent) => void) | null = null
     postMessage(data: unknown) {
@@ -259,14 +260,14 @@ Verify performance criteria defined in the checklist with automated benchmark te
 import { bench, describe } from 'vitest'
 
 describe('performance benchmarks', () => {
-  // checklist #42: search response < 200ms (10K records)
-  bench('search 10K records (checklist #42)', () => {
-    searchRecords(largeDataset10K, 'query')
+  // checklist #119: chart rendering < 100ms (500K pts)
+  bench('LTTB downsampling 500K → 2000 points (checklist #119)', () => {
+    downsample(largeDataset500K, 2000)
   }, { time: 5000 })  // measure over 5 seconds
 
-  // checklist #55: data processing < 500ms
-  bench('process 100K rows of data', () => {
-    processLargeDataset(dataset100K)
+  // checklist #86: rendering performance < 100ms
+  bench('chart data preparation 500K points', () => {
+    prepareChartData(largeDataset500K, selectedColumns)
   }, { time: 5000 })
 })
 ```
@@ -279,15 +280,15 @@ describe('performance benchmarks', () => {
 
 ```typescript
 // Performance assertion example
-it('batch import 1000 records < 5 seconds (checklist #60)', async () => {
+it('30-file data merge < 10 seconds (checklist #118)', async () => {
   const measurements = []
   for (let i = 0; i < 3; i++) {
     const start = performance.now()
-    await batchImport(thousandRecords)
+    await mergeFiles(thirtyFileDatasets)
     measurements.push(performance.now() - start)
   }
   const median = measurements.sort((a, b) => a - b)[1]
-  expect(median).toBeLessThan(5_000)  // 5 seconds = 5,000ms
+  expect(median).toBeLessThan(10_000)  // 10 seconds = 10,000ms
 })
 ```
 
@@ -295,27 +296,27 @@ it('batch import 1000 records < 5 seconds (checklist #60)', async () => {
 
 API/data flow tests:
 - Request/response verification per API endpoint
-- State transition flow verification (data flow between state stores)
+- State transition flow verification (data flow between Zustand stores)
 - Use mocks for external services
-- **Data pipeline E2E:** input → processing → output result verification (using Worker mock if applicable)
+- **Data pipeline E2E:** file → decoder engine → transformation result verification (using Worker mock)
 
 ```typescript
-// Integration test example: input → process → output
+// Integration test example: file → decoder → result
 describe('data pipeline integration', () => {
-  it('CSV upload → parse → store in DB (checklist #45)', async () => {
-    const csvFile = fixtures.sampleCSV
-    const config = fixtures.importConfig
+  it('Turbo CSV → decode → COMMON_TIME + scale applied (checklist #45)', async () => {
+    const csvBuffer = fixtures.turboRawCsv
+    const config = fixtures.turboDecoderConfig
+    const infoBuffer = fixtures.turboInfo
 
-    const parsed = await parseCSV(csvFile, config)
-    const result = await storeRecords(parsed.rows)
+    const columns = await scanColumns(csvBuffer, config, infoBuffer)
+    const data = await loadData(csvBuffer, config, infoBuffer, columns.slice(0, 3))
 
-    // All rows imported
-    expect(result.imported).toBe(parsed.rows.length)
-    expect(result.errors).toHaveLength(0)
+    // COMMON_TIME exists
+    expect(data.timeColumn).toBeDefined()
+    expect(data.timeColumn.length).toBeGreaterThan(0)
 
-    // Data integrity verified
-    const stored = await fetchRecords({ limit: 1 })
-    expect(stored[0].name).toBe(parsed.rows[0].name)
+    // Scale applied (6 decimal places)
+    expect(data.columns[0].values[0]).toBeCloseTo(expectedValue, 6)
   })
 })
 ```

@@ -1,202 +1,67 @@
 ---
 name: web-project-planner
-description: "Before building a new website, analyze the project structure and ask about requirements and tech stack to generate a feature spec (spec.md), system design doc (system-design.md), DB migrations (migrations/), implementation plan (plan.md), and verification checklist (checklist.md). Corresponds to Phase 1-2 of /dev-workflow."
-argument-hint: "[plan | design | project-name (optional)]"
+description: "Before building a new website, analyze the project structure and ask about requirements and tech stack to generate a feature spec (spec.md), system design doc (system-design.md), DB migrations (migrations/), and unified implementation checklist (checklist.md). Corresponds to Phase 2 (Discover) + Phase 3 (Plan) of /instant-dev-flow."
+argument-hint: "[discover | plan | project-name (optional)]"
 ---
 
 # Web Project Planner Skill
 
 ## Purpose
 
-Before starting a new website project, analyze the project structure and collect requirements through interactive Q&A with the user to generate a **feature specification**, **system design document**, **DB migrations**, **step-by-step implementation plan**, and **verification checklist**.
+Before starting a new website project, analyze the project structure and collect requirements through interactive Q&A with the user to generate a **feature specification**, **system design document**, **DB migrations**, and **unified implementation checklist**.
 
-> **Note:** This skill corresponds to Phase 1 (Planning) + Phase 2 (Design) of `/dev-workflow`.
+> **Note:** This skill corresponds to Phase 2 (Discover) + Phase 3 (Plan) of `/instant-dev-flow`.
 
 ## Execution Modes
 
 | Argument | Mode | Scope | Generated Documents |
 |----------|------|-------|-------------------|
-| (none) | Full | Phase 0 → Phase 1 → Phase 2 complete | spec.md, system-design.md, migrations, plan.md, checklist.md |
-| `plan` | Planning | Phase 0 → Phase 1 → Phase 2 (docs 1-3 only) | spec.md, system-design.md, migrations |
-| `design` | Design | Read existing spec.md → Phase 2 (docs 4-5 only) | plan.md, checklist.md |
+| (none) | Full | Phase 0 → Phase 1 → Phase 2 complete | spec.md, system-design.md, migrations, checklist.md |
+| `discover` | Discover | Phase 0 → Phase 1 → Phase 2 (docs 1-3 only) | spec.md, system-design.md, migrations |
+| `plan` | Plan | Read existing spec.md → Phase 2 (doc 4 only) | checklist.md |
 | `[project-name]` | Full | Same as (none), uses project name in document titles | All |
 
-> `design` mode requires `docs/spec/spec.md` and `docs/architecture/system-design.md` to already exist. If missing, guide user to run `plan` mode first.
+> `plan` mode requires `docs/spec.md` and `docs/system-design.md` to already exist. If missing, guide user to run `discover` mode first.
 
 ## Execution Steps
 
 ### Phase 0: Project Structure Analysis (Automatic)
 
-Before generating documents, apply the analysis logic from `/project-structure` skill to understand the current project state.
+Delegate to `/project-structure analyze` for thorough project analysis.
 
-1. **Parallel scan:**
-   - `**/*` glob (4 levels, excluding node_modules, etc.)
-   - Read `package.json`, `tsconfig.json`, `README.md`, `CLAUDE.md`
-   - Check monorepo indicators (workspaces, turbo.json, nx.json)
-   - Check existing `docs/` directory
+1. **Run `/project-structure analyze`** which performs:
+   - Parallel scan of all files + configs (package.json, tsconfig.json, etc.)
+   - Framework detection (Next.js, React, Vue, etc.)
+   - Monorepo indicator check (workspaces, turbo.json, nx.json)
+   - Directory structure evaluation and issue identification
 
-2. **Detection targets:**
-   - Project type & framework (Next.js, React, Vue, etc.)
-   - Existing directory structure and conventions
-   - Already existing documents (existing spec, plan, etc.)
-   - Tech stack in use
-
-3. **Reflect structure analysis in subsequent document generation:**
+2. **Use analysis results to inform document generation:**
    - Reflect actual structure in system-design.md directory structure section
-   - Reflect current project state in plan.md Phase 0
+   - Reflect current project state in checklist.md Phase 0
    - If existing documents are found, confirm with user before overwriting
 
 ---
 
 ### Phase 1: Requirements Gathering (Interactive Q&A)
 
-Use the AskUserQuestion tool to ask questions by category. Bundle up to 4 questions at a time. Proceed with follow-up questions based on user responses.
+> **Q&A templates are defined in `references/questions.md`.** Read that file for all question definitions (Round 1~3 + follow-up rules).
 
-#### Round 1: Project Basic Information
-
-Ask the following 4 questions:
-
-1. **Project Type**
-   - header: "Project Type"
-   - question: "What kind of website are you building?"
-   - options:
-     - "Corporate/Brand Site" — Company/brand intro, portfolio
-     - "Booking/Order Management System" — Reservations, orders, scheduling
-     - "Community/Forum" — User community, forum, blog
-     - "Dashboard/Admin System" — Data management, admin panel
-
-2. **User Types**
-   - header: "User Types"
-   - question: "What types of users will use the system? (Multiple selection allowed)"
-   - multiSelect: true
-   - options:
-     - "General Users (Customers)" — Regular customers using the service
-     - "Administrators (Operators)" — System operators/managers
-     - "Staff/Employees" — Internal staff with limited permissions
-     - "Anonymous Visitors" — Visitors without login
-
-3. **Core Feature**
-   - header: "Core Feature"
-   - question: "What is the most important core feature?"
-   - options:
-     - "Booking/Scheduling" — Date/time-based reservation management
-     - "Product/Service Management" — Product registration, catalog, pricing
-     - "User Management/Auth" — Sign-up, login, permission management
-     - "Content Management" — Posts, announcements, page management
-
-4. **Project Name**
-   - header: "Project Name"
-   - question: "What is the project name (or service name)?"
-   - options:
-     - "Not decided yet" — Will decide later
-     - "Enter manually" — Enter the project name directly
-
-#### Round 2: Tech Stack & Infrastructure
-
-If Phase 0 detected an existing tech stack, present it as the default. Ask the following 4 questions:
-
-1. **Frontend Framework**
-   - header: "Framework"
-   - question: "Which frontend framework will you use?"
-   - options:
-     - "Next.js (App Router) (Recommended)" — React-based, SSR/SSG, full-stack
-     - "React + Vite" — SPA, client-side rendering
-     - "Nuxt.js" — Vue.js-based full-stack framework
-     - "Astro" — Content-focused static sites
-
-2. **Backend/Database**
-   - header: "Backend/DB"
-   - question: "How will you set up the backend and database?"
-   - options:
-     - "Supabase (PostgreSQL) (Recommended)" — BaaS, integrated auth/DB/storage
-     - "Firebase (Firestore)" — Google BaaS, NoSQL
-     - "Dedicated Backend Server (Express/NestJS)" — Node.js-based custom API server
-     - "Enter manually" — Other tech stack
-
-3. **Deployment Environment**
-   - header: "Deployment"
-   - question: "Where will you deploy?"
-   - options:
-     - "Vercel (Recommended)" — Next.js optimized, auto deploy
-     - "AWS (EC2/ECS)" — Self-managed infrastructure
-     - "Cloudflare Pages" — Edge-based deployment
-     - "Enter manually" — Other deployment environment
-
-4. **UI Styling**
-   - header: "Styling"
-   - question: "How will you handle UI styling?"
-   - options:
-     - "Tailwind CSS + shadcn/ui (Recommended)" — Utility CSS + component library
-     - "Tailwind CSS" — Utility-based CSS only
-     - "Material UI (MUI)" — Google Material Design components
-     - "Enter manually" — Other UI framework
-
-#### Round 3: Detailed Feature Requirements
-
-Ask about detailed features based on Round 1 responses. Question content is dynamically composed based on project type.
-
-Example questions (select based on project type):
-
-1. **Notification/Messaging System**
-   - header: "Notifications"
-   - question: "Do you need notification/messaging features? (Multiple selection allowed)"
-   - multiSelect: true
-   - options:
-     - "KakaoTalk Notifications" — Kakao business messages
-     - "Email Notifications" — Email sending
-     - "SMS" — Text message sending
-     - "Not needed" — No notification features required
-
-2. **External Service Integration**
-   - header: "Integrations"
-   - question: "Are there external services you need to integrate? (Multiple selection allowed)"
-   - multiSelect: true
-   - options:
-     - "Google Calendar" — Calendar/schedule integration
-     - "Google Sheets" — Spreadsheet data integration
-     - "Payments (Toss Payments/KakaoPay)" — Online payments
-     - "Not needed" — No external integrations required
-
-3. **Design Concept**
-   - header: "Design"
-   - question: "Do you have a design concept or reference site?"
-   - options:
-     - "Minimal/Simple" — Clean, no-frills design
-     - "Modern/Trendy" — Contemporary, polished design
-     - "Have a reference site" — There's a benchmark site (enter manually)
-     - "Designer will provide" — Design files from Figma/Zeplin etc.
-
-4. **Additional Requirements**
-   - header: "Other"
-   - question: "Any additional features or special considerations? (Multiple selection allowed)"
-   - multiSelect: true
-   - options:
-     - "Responsive (Mobile-first)" — Mobile optimization required
-     - "Multi-language support" — Languages beyond primary needed
-     - "SEO Optimization" — Search engine optimization needed
-     - "Enter manually" — Other requirements
-
-#### Follow-up Questions (As Needed)
-
-If user responses are unclear or additional information is needed, use AskUserQuestion in free form for follow-up.
-
-Specifically, always ask follow-up when the following are unclear:
-- Core business flow (e.g., state flow like booking → approval → confirmation)
-- Accessible pages and feature scope per user type
-- Data relationships (e.g., 1:N, N:M relationships)
-- Special business rules or constraints
+**Summary:** 3 rounds of AskUserQuestion (up to 4 questions each), plus follow-up as needed:
+- **Round 1:** Project type, user types, core feature, project name
+- **Round 2:** Frontend framework, backend/DB, deployment, UI styling (use Phase 0 detection as defaults)
+- **Round 3:** Notifications, external integrations, design concept, additional requirements (dynamic based on Round 1)
 
 ---
 
 ### Phase 2: Document Generation
 
-Generate documents under the `docs/` directory based on collected requirements. Follow the folder structure rules from the `project-docs` skill.
+Generate documents under the `docs/` directory based on collected requirements.
 
-- **`plan` mode**: Generate docs 1-3 only (spec.md, system-design.md, migrations)
-- **`design` mode**: Generate docs 4-5 only (plan.md, checklist.md) — skip Phases 0-1 and read existing spec.md
-- **No argument / project name**: Generate all docs 1-5
+- **`discover` mode**: Generate docs 1-3 only (spec.md, system-design.md, migrations)
+- **`plan` mode**: Generate doc 4 only (checklist.md) — skip Phases 0-1 and read existing spec.md
+- **No argument / project name**: Generate all docs 1-4
 
-#### Document 1: `docs/spec/spec.md` (Feature Specification) — included in `plan` mode
+#### Document 1: `docs/spec.md` (Feature Specification) — included in `discover` mode
 
 Follow this structure:
 
@@ -284,7 +149,7 @@ Follow this structure:
 [Features excluded from MVP but planned for future expansion]
 ```
 
-#### Document 2: `docs/architecture/system-design.md` (System Design Document) — included in `plan` mode
+#### Document 2: `docs/system-design.md` (System Design Document) — included in `discover` mode
 
 Write based on Phase 0 project structure analysis results:
 
@@ -337,7 +202,7 @@ Write based on Phase 0 project structure analysis results:
 - Auth/authorization, input validation, CORS, etc.
 ```
 
-#### Document 3: DB Migrations (migration structure) — included in `plan` mode
+#### Document 3: DB Migrations (migration structure) — included in `discover` mode
 
 Generate as a **migration directory structure** instead of a single schema.sql.
 
@@ -424,125 +289,86 @@ Each migration file follows this format:
 [Execution guide appropriate for the DB environment]
 ```
 
-#### Document 4: `docs/plan/plan.md` (Step-by-Step Implementation Plan) — included in `design` mode
+#### Document 4: `docs/checklist.md` (Unified Implementation Checklist) — included in `plan` mode
 
-> In `design` mode: Read existing `docs/spec/spec.md` and `docs/architecture/system-design.md` to generate this document.
-
-Follow this structure:
-
-```markdown
-# [Project Name] — Step-by-Step Implementation Plan
-
-> Total N phases · Each phase is an independently functional unit
-
----
-
-## Phase 0. Project Initial Setup
-
-### 0-1. Project Creation
-- Framework initialization command
-- Folder structure setup
-- Linter/formatter configuration
-
-### 0-2. Backend/DB Connection
-- DB project creation and connection
-- Environment variable setup
-- Client utility files
-
-### 0-3. DB Migration Execution
-- Execute migrations/ files sequentially
-- Create admin account
-
-### 0-4. Design System Foundation
-- Theme setup
-- Common components
-- Font configuration
-
-**Completion Criteria**: [Specific criteria to determine this phase is complete]
-
----
-
-## Phase 1~N. Feature Implementation
-
-[For each Phase]:
-- Numbered list of detailed tasks
-- Specific implementation content for each task
-- API endpoint specifications (method path — description)
-- UI component list
-- Additional migration files if needed
-
-**Completion Criteria**: [Specific completion criteria]
-
----
-
-## Final Phase. Deployment & Wrap-up
-
-### Deployment Configuration
-### Production Data Setup
-### QA Checklist (checkbox format)
-
-**Completion Criteria**: Production-ready state
-
----
-
-## Implementation Order Summary
-
-[Visualize inter-phase relationships with ASCII diagram]
-```
-
-**Implementation plan writing rules:**
-- Each phase is an independently functional unit
-- Phase 0 is always project initial setup
-- Core user features first, admin features next
-- External integrations after core features are complete
-- Deployment/QA in the final phase
-- Completion criteria must be specific and verifiable
-
-#### Document 5: `docs/plan/checklist.md` (Verification Checklist) — included in `design` mode
-
-Auto-generate check items corresponding to each step in plan.md:
+> In `plan` mode: Read existing `docs/spec.md` and `docs/system-design.md` to generate this document.
+> This document replaces both plan.md and checklist.md — a single document containing phase-by-phase implementation tasks with checkboxes.
 
 ```markdown
 # [Project Name] — Implementation Checklist
 
-> Auto-generated from plan.md | Last modified: [Date]
+> Auto-generated from spec.md + system-design.md | Last modified: [Date]
+> Total N phases · Each phase is an independently functional unit
 
 ## Usage
-- After implementing each step, check the corresponding item with `[x]`
-- Order: File existence → Feature operation → Data integrity
+- Implement each phase in order; check items with `[x]` as completed
+- Each phase has completion criteria that must be met before proceeding
+- Order within steps: File creation → Feature operation → Data integrity
 
 ---
 
 ## Phase 0: Project Initial Setup
 
-### Step 0-1: Project Creation
-- [ ] #1 Verify project directory creation
-- [ ] #2 Verify package.json dependencies installed
-- [ ] #3 Verify dev server runs successfully
+### 0-1. Project Creation
+- [ ] #1 Framework initialization
+- [ ] #2 Folder structure setup per system-design.md
+- [ ] #3 Linter/formatter configuration
+- [ ] #4 .gitignore setup
+- [ ] #5 Environment variables setup
 
-### Step 0-3: DB Migration
-- [ ] #N 001_initial_schema.sql executed successfully
-- [ ] #N+1 002_add_indexes.sql executed successfully
-- [ ] #N+2 Seed data insertion verified
+### 0-2. Backend/DB Connection
+- [ ] #6 DB project creation and connection
+- [ ] #7 `.env.local` + `.env.example` setup
+- [ ] #8 Client utility files
 
-...
+### 0-3. DB Migration Execution
+- [ ] #9 001_initial_schema.sql executed
+- [ ] #10 002_add_indexes.sql executed
+- [ ] #11 Seed data verified
+
+### 0-4. Design System Foundation
+- [ ] #12 Theme setup (colors, typography, spacing)
+- [ ] #13 Common components (Button, Input, Layout, etc.)
+- [ ] #14 Font configuration
+
+**Completion Criteria:** Dev server runs, DB connected, design tokens set
 
 ---
 
-## Phase 1~N: [Phase Name]
+## Phase 1~N: [Feature Name]
 
-### Step N-1: [Step Name]
-- [ ] #N File creation/modification verified: `src/...`
-- [ ] #N+1 Feature operation verified: [specific behavior description]
-- [ ] #N+2 Error handling verified: [error scenario]
+### N-1. [Step Name]
+- [ ] #NN [Task description] — `src/path/to/file`
+- [ ] #NN+1 [Task description]
+- [ ] #NN+2 [Verification: specific behavior]
+
+**Completion Criteria:** [Specific, testable criteria]
+
+---
+
+## Final Phase: Deployment & Wrap-up
+
+### Deployment Configuration
+- [ ] #NN Hosting setup
+- [ ] #NN+1 Environment variables in production
+- [ ] #NN+2 Domain configuration
+
+### QA Checklist
+- [ ] #NN+3 Production build successful
+- [ ] #NN+4 No TypeScript errors
+- [ ] #NN+5 No ESLint errors
+- [ ] #NN+6 All pages accessible
+- [ ] #NN+7 Responsive design verified
+
+**Completion Criteria:** Production-ready state
 
 ---
 
 ## Comprehensive Verification
 
-### spec.md Compliance Check
-- [ ] All pages implemented
-- [ ] All state flows implemented
+### spec.md Compliance
+- [ ] All pages/features implemented
+- [ ] All state flows working
 - [ ] Non-functional requirements met
 
 ### Performance
@@ -556,42 +382,42 @@ Auto-generate check items corresponding to each step in plan.md:
 ```
 
 **Checklist writing rules:**
-- 3-5 check items per plan.md step
-- Order: File existence → Feature operation → Data integrity
+- Each phase is an independently functional unit
+- Phase 0 is always project initial setup
+- Core user features first, admin features next
+- External integrations after core features are complete
+- Deployment/QA in the final phase
+- 3-5 check items per step
 - Sequential numbering (#N) for all items
-- Comprehensive verification section includes spec.md compliance, performance, and build checks
+- Completion criteria must be specific and verifiable
 
 ---
 
 ## Writing Rules (Common)
 
-1. **Use clear language**: Technical terms may include both English and localized terms where helpful.
+1. **Use clear language**: Write all documents in English.
 2. **Use tables extensively**: Use markdown tables for listing items.
 3. **ASCII diagrams**: Visualize state flows, page maps, and implementation order with ASCII diagrams.
 4. **Cross-document consistency**: Terminology, table names, status codes, and page paths must be consistent across all documents.
 5. **Practicality**: Write content at a level that can be directly used for implementation.
 6. **Message templates**: If notification/messaging features exist, include actual message content as templates.
-7. **Follow project-docs conventions**: Filenames in lowercase-kebab-case.md, folder structure uses `docs/spec/`, `docs/architecture/`, `docs/plan/`, `docs/schema/`.
+7. **Filenames**: lowercase-kebab-case.md.
 
 ## File Paths
 
 ```
 docs/
-├── spec/
-│   └── spec.md                    ← Feature specification
-├── architecture/
-│   └── system-design.md           ← System design document
-├── schema/
-│   ├── schema-overview.md         ← Schema overview
-│   └── migrations/
-│       ├── 001_initial_schema.sql
-│       ├── 002_add_indexes.sql
-│       ├── ...
-│       └── README.md              ← Migration guide
-└── plan/
-    ├── plan.md                    ← Implementation roadmap
-    ├── checklist.md               ← Verification checklist
-    └── workflow-state.md          ← Workflow state (auto-generated)
+├── spec.md                       ← Feature specification
+├── system-design.md              ← System design document
+├── checklist.md                  ← Unified implementation checklist
+├── workflow-state.md             ← Workflow state (auto-generated)
+└── schema/
+    ├── schema-overview.md        ← Schema overview
+    └── migrations/
+        ├── 001_initial_schema.sql
+        ├── 002_add_indexes.sql
+        ├── ...
+        └── README.md             ← Migration guide
 ```
 
 - If a project name is given as argument, use it in document titles
@@ -605,12 +431,12 @@ After generating all documents, show a brief summary to the user:
 2. Key feature summary (3-5 bullet points)
 3. Total number of phases and key phase descriptions
 4. Migration file list and execution order
-5. Next step guidance: "Run `/dev-workflow impl` to start implementation from Phase 0"
+5. Next step guidance: "Run `/instant-dev-flow impl` to start implementation from Phase 0"
 
 ## workflow-state.md Auto-Update
 
-Create/update `docs/plan/workflow-state.md` when document generation completes:
+Create/update `docs/workflow-state.md` when document generation completes:
 
-- **`plan` mode**: Phase 1 = completed, Phase 2 = pending
-- **`design` mode**: Phase 2 = completed (Phase 1 should already be completed)
-- **No argument / full**: Phase 1, 2 = completed
+- **`discover` mode**: Phase 2 = completed, Phase 3 = pending
+- **`plan` mode**: Phase 3 = completed (Phase 2 should already be completed)
+- **No argument / full**: Phase 2, 3 = completed

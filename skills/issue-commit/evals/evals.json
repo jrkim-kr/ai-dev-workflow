@@ -1,0 +1,58 @@
+{
+  "skill_name": "issue-commit",
+  "evals": [
+    {
+      "id": 1,
+      "name": "feat-popup-ui",
+      "prompt": "I just added a new settings button to the popup UI in unified_extension/popup.html. Run the issue-commit workflow. (DRY RUN: do NOT actually run gh issue create, git commit, or git push — instead output exactly what commands you WOULD run and what the issue/commit content would be.)",
+      "expected_output": "Should skip PHASE 1 (not a fix), auto-detect type as feat, infer scope as popup, create English issue with title format type(scope): description, include --assignee @me, show execution summary",
+      "files": [],
+      "assertions": [
+        {"text": "Issue title follows type(scope): description format", "type": "pattern_match", "pattern": "feat(popup):"},
+        {"text": "Issue title and body are in English", "type": "manual"},
+        {"text": "--assignee @me is included in gh issue create", "type": "pattern_match", "pattern": "--assignee @me"},
+        {"text": "Label existence check command is present", "type": "pattern_match", "pattern": "gh label list"},
+        {"text": "Commit message shown in both English and Korean", "type": "manual"},
+        {"text": "Execution summary table is present", "type": "pattern_match", "pattern": "Execution Summary"},
+        {"text": "Scope 'popup' is auto-inferred from file path", "type": "manual"},
+        {"text": "PHASE 1 (error documentation) is skipped", "type": "pattern_match", "pattern": "skip|Skip|skipped|not a fix"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "fix-api-error",
+      "prompt": "I fixed an API timeout bug in hotel-price-updater/src/api.js — the fetch call was missing a timeout parameter. Run the issue-commit workflow. (DRY RUN: do NOT actually run gh issue create, git commit, or git push — instead output exactly what commands you WOULD run and what the issue/commit content would be.)",
+      "expected_output": "Should execute PHASE 1 (error doc), dynamically find errors/ directory, auto-detect type as fix, infer scope as price-updater, check for duplicate issues, verify label exists, create English issue with unified title, include --assignee @me, show execution summary",
+      "files": [],
+      "assertions": [
+        {"text": "Issue title follows type(scope): description format", "type": "pattern_match", "pattern": "fix(price-updater):"},
+        {"text": "Issue title and body are in English", "type": "manual"},
+        {"text": "--assignee @me is included in gh issue create", "type": "pattern_match", "pattern": "--assignee @me"},
+        {"text": "Label existence check command is present", "type": "pattern_match", "pattern": "gh label list"},
+        {"text": "Commit message shown in both English and Korean", "type": "manual"},
+        {"text": "Execution summary table is present", "type": "pattern_match", "pattern": "Execution Summary"},
+        {"text": "PHASE 1 error documentation is created with ERR code", "type": "pattern_match", "pattern": "ERR-"},
+        {"text": "Dynamic errors/ directory search using find command", "type": "pattern_match", "pattern": "find ."},
+        {"text": "Duplicate issue check with gh issue list --search", "type": "pattern_match", "pattern": "gh issue list --search"},
+        {"text": "Scope 'price-updater' is auto-inferred from file path", "type": "manual"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "style-css-format",
+      "prompt": "I reformatted the CSS in unified_extension/popup.html — just indentation and spacing cleanup, no functional changes. Run the issue-commit workflow. (DRY RUN: do NOT actually run gh issue create, git commit, or git push — instead output exactly what commands you WOULD run and what the issue/commit content would be.)",
+      "expected_output": "Should skip PHASE 1 (not a fix), auto-detect type as style, infer scope as popup, create English issue with unified title, include --assignee @me, show execution summary",
+      "files": [],
+      "assertions": [
+        {"text": "Issue title follows type(scope): description format", "type": "pattern_match", "pattern": "style(popup):"},
+        {"text": "Issue title and body are in English", "type": "manual"},
+        {"text": "--assignee @me is included in gh issue create", "type": "pattern_match", "pattern": "--assignee @me"},
+        {"text": "Label existence check command is present", "type": "pattern_match", "pattern": "gh label list"},
+        {"text": "Commit message shown in both English and Korean", "type": "manual"},
+        {"text": "Execution summary table is present", "type": "pattern_match", "pattern": "Execution Summary"},
+        {"text": "PHASE 1 (error documentation) is skipped", "type": "pattern_match", "pattern": "skip|Skip|skipped|not a fix"},
+        {"text": "Change type 'style' is auto-detected", "type": "pattern_match", "pattern": "style"}
+      ]
+    }
+  ]
+}

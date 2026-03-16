@@ -1,154 +1,110 @@
-# ai-dev-workflow
+# AI Dev Workflow
 
-**AI writes code. It doesn't enforce discipline. This workflow does.**
+End-to-end project development workflow powered by Claude Code skills.
 
-A spec-driven development framework that enforces process discipline when building with AI coding assistants. Six sequential phases. No skipping. No shortcuts.
+## Overview
 
-Built for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills.
+`/instant-dev-flow` orchestrates 7 sequential phases + continuous commit to manage the full project lifecycle:
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+```
+Phase 1       Phase 2       Phase 3       Phase 4       Phase 5       Phase 6       Phase 7
+Intake     →  Discover   →  Plan       →  Implement  →  Review     →  Test       →  Deliver
+─────────    ─────────     ─────────     ─────────     ─────────     ─────────     ─────────
+Clarify       spec.md       Validate      Write code    Product +     Unit/Integ/   Setup guides
+mvp-prd.md    system-       checklist.md  Frontend +    Code review   E2E tests     README.md
+              design.md                   Backend                     Reports
 
----
-
-## The Six Phases
-
-```mermaid
-flowchart LR
-    P1["Phase 1<br/>Planning"] --> P2["Phase 2<br/>Design"]
-    P2 --> P3["Phase 3<br/>Implementation"]
-    P3 --> P4["Phase 4<br/>Review"]
-    P4 --> P5["Phase 5<br/>Testing"]
-    P5 --> P6["Phase 6<br/>Commit"]
+                        ┌─────────────────────────────────────┐
+                        │  commit (anytime): Error Doc / ADR  │
+                        │  / Git Commit Convention            │
+                        └─────────────────────────────────────┘
 ```
 
-| Phase | Command | Delegates To | Output |
-|-------|---------|-------------|--------|
-| 1. Plan | `/dev-workflow plan` | `web-project-planner` | spec.md, system-design.md, migrations/ |
-| 2. Design | `/dev-workflow design` | `web-project-planner` | plan.md, checklist.md |
-| 3. Implement | `/dev-workflow impl` | — (self) | Source code |
-| 4. Review | `/dev-workflow review` | `code-review-expert` | Review report (P0–P3) |
-| 5. Test | `/dev-workflow test` | `test-verify` | Tests, verification report |
-| 6. Commit | `/dev-workflow commit` | `issue-commit` | GitHub issues, commits, push |
+## Skills
 
-> **Rule:** The previous phase must complete before proceeding to the next. Status is tracked in `docs/plan/workflow-state.md`.
+### Core Orchestrator
 
----
+| Skill | Description |
+|-------|-------------|
+| [instant-dev-flow](skills/instant-dev-flow/) | Main workflow orchestrator — 7 phases + continuous commit |
 
-## Quick Start
+### Phase Skills
 
-### Install
+| Phase | Skill | Role |
+|-------|-------|------|
+| 1. Intake | [prd](skills/prd/) | PRD generation with structured discovery |
+| 2. Discover | [project-structure](skills/project-structure/) | Project structure analysis |
+| 2. Discover | [web-project-planner](skills/web-project-planner/) | spec.md, system-design.md, migrations, checklist.md |
+| 4. Implementation | [issue-commit](skills/issue-commit/) | Error documentation + git commit workflow |
+| 5. Review | [code-review-expert](skills/code-review-expert/) | SOLID, security, code quality review |
+| 6. Testing | [test-verify](skills/test-verify/) | Test generation, execution, verification |
+| 7. Deliver | [project-docs](skills/project-docs/) | Documentation sync & validation |
+
+### References
+
+The `instant-dev-flow` skill includes convention references:
+
+| Reference | Purpose |
+|-----------|---------|
+| [branch-convention.md](skills/instant-dev-flow/references/branch-convention.md) | Git branch naming rules |
+| [commit-convention.md](skills/instant-dev-flow/references/commit-convention.md) | Conventional Commits format |
+| [pr-issue-template.md](skills/instant-dev-flow/references/pr-issue-template.md) | GitHub PR & issue templates |
+| [docs-structure.md](skills/instant-dev-flow/references/docs-structure.md) | docs/ directory layout |
+| [docs-naming-convention.md](skills/instant-dev-flow/references/docs-naming-convention.md) | File naming rules |
+| [gitignore-templates.md](skills/instant-dev-flow/references/gitignore-templates.md) | .gitignore templates |
+| [env-convention.md](skills/instant-dev-flow/references/env-convention.md) | Environment variables convention |
+| [readme-template.md](skills/instant-dev-flow/references/readme-template.md) | README.md template |
+
+## Docs Structure
+
+Projects using this workflow generate documentation under `docs/`:
+
+```
+docs/
+├── mvp-prd.md              ← Product Requirements Document
+├── spec.md                 ← Feature Specification
+├── system-design.md        ← System Design + ADRs
+├── checklist.md            ← Unified Implementation Checklist
+├── workflow-state.md       ← Workflow State (auto-generated)
+├── schema/                 ← DB schema & migrations
+├── test/                   ← Test reports
+├── guides/                 ← Setup guides
+└── errors/                 ← Error documentation
+```
+
+## Installation
+
+Copy the skills you need into your `~/.claude/skills/` directory:
 
 ```bash
-cp -r skills/* ~/.claude/skills/
+# Clone this repo
+git clone https://github.com/jrkim-kr/ai-dev-workflow.git
+
+# Copy all skills
+cp -r ai-dev-workflow/skills/* ~/.claude/skills/
 ```
 
-### New project
+## Usage
 
 ```bash
-/dev-workflow plan      # Phase 1: Q&A -> spec, system design, migrations
-/dev-workflow design    # Phase 2: implementation plan + checklist
-/dev-workflow impl      # Phase 3: code step-by-step
-/dev-workflow review    # Phase 4: spec compliance + code quality
-/dev-workflow test      # Phase 5: generate & run tests
-/dev-workflow commit    # Phase 6: GitHub issues + commit + push
+# Start a new project
+/instant-dev-flow intake
+
+# Check workflow status
+/instant-dev-flow status
+
+# Continue to next phase
+/instant-dev-flow discover
+/instant-dev-flow plan
+/instant-dev-flow impl
+/instant-dev-flow review
+/instant-dev-flow test
+/instant-dev-flow deliver
+
+# Commit anytime
+/instant-dev-flow commit
 ```
-
-Or combine Phase 1+2:
-
-```bash
-/web-project-planner my-project  # Phase 1+2: all planning docs at once
-/dev-workflow impl               # Phase 3+
-```
-
-### Existing project (standalone skills)
-
-```bash
-/code-review-expert     # Review current git changes
-/test-verify verify     # Run existing tests + verification report
-/issue-commit           # Create issues + commit + push
-```
-
----
-
-## Architecture
-
-`/dev-workflow` is an **orchestrator** — it validates prerequisites, delegates to specialized skills, and updates state.
-
-```mermaid
-flowchart TD
-    User["User: /dev-workflow"]
-    Orch["Orchestrator<br/>(dev-workflow)<br/>Validate -> Delegate -> Update State"]
-
-    User --> Orch
-
-    Orch -->|"plan / design"| WPP["/web-project-planner<br/>spec.md, system-design.md<br/>plan.md, checklist.md"]
-    Orch -->|"impl"| Self["Self-executing<br/>Step-by-step code"]
-    Orch -->|"review"| CRE["/code-review-expert<br/>+ spec compliance"]
-    Orch -->|"test"| TV["/test-verify<br/>Tests + verification report"]
-    Orch -->|"commit"| IC["/issue-commit<br/>GitHub issues + commits"]
-```
-
-Each skill is also **independently usable** outside the workflow.
-
----
-
-## Document Output Structure
-
-```
-your-project/
-└── docs/
-    ├── spec/spec.md                    <- What to build
-    ├── architecture/system-design.md   <- Why it was designed this way
-    ├── schema/
-    │   ├── schema-overview.md          <- Data structure overview
-    │   └── migrations/*.sql
-    └── plan/
-        ├── plan.md                     <- How to build it
-        ├── checklist.md                <- Verification checklist
-        └── workflow-state.md           <- Current workflow state
-```
-
----
-
-## Project Structure
-
-```
-ai-dev-workflow/
-├── skills/
-│   ├── dev-workflow/SKILL.md           # Master orchestrator
-│   ├── web-project-planner/SKILL.md    # Phase 1+2: planning & design
-│   ├── code-review-expert/             # Phase 4: code review
-│   │   ├── SKILL.md
-│   │   └── references/                 # Review checklists
-│   ├── test-verify/SKILL.md            # Phase 5: testing
-│   └── issue-commit/SKILL.md           # Phase 6: issues + commit
-├── templates/                          # Document templates
-├── ROADMAP.md
-├── CONTRIBUTING.md
-└── LICENSE
-```
-
----
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for details.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Acknowledgments
-
-The `code-review-expert` skill was inspired by [sanyuan0704/sanyuan-skills](https://github.com/sanyuan0704/sanyuan-skills).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
-
----
-
-<p align="center">
-  <strong>Don't optimize prompts. Optimize process.</strong>
-</p>
+MIT

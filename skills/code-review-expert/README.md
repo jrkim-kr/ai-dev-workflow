@@ -4,10 +4,14 @@ A comprehensive code review skill for AI agents. Performs structured reviews wit
 
 ## Installation
 
-Copy the `code-review-expert/` directory into your Claude Code skills directory:
+```bash
+npx skills add sanyuan0704/code-review-expert
+```
+
+Or via Agent Skills:
 
 ```bash
-cp -r skills/code-review-expert/ ~/.claude/skills/code-review-expert/
+npx agent-skills-cli install @sanyuan0704/code-review-expert
 ```
 
 ## Features
