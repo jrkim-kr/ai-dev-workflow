@@ -96,6 +96,22 @@ Record the issue number for commit references.
 
 # PHASE 3: COMMIT (English commit, show both English & Korean)
 
+## Pre-Commit: Error Doc Check (MANDATORY for all types)
+
+Before creating any commit, check existing error docs for prevention violations:
+
+1. Discover error doc directories:
+   ```bash
+   find . -type d -name "errors" -not -path "*/node_modules/*" -not -path "*/.git/*"
+   ```
+2. Read all error docs and review their **Prevention Checklist** sections
+3. Cross-check changed files against each checklist — determine if any violation applies
+4. Report results before committing:
+   - List each error doc checked
+   - State whether it's relevant to the current changes (with reason)
+   - If a violation is found: **STOP** and fix before committing
+   - If no violations: proceed with commit
+
 PHASE 0 already analyzed the diff — reuse that analysis here. Do NOT re-run `git diff` or `git status` unless changes were made after PHASE 0.
 
 **Group by project** if changes span multiple directories. Commit order: Root → hotel-price-updater → unified_extension.
@@ -147,6 +163,8 @@ Use AskUserQuestion:
 Before implementing or modifying code:
 1. Check `<project>/errors/` for documented errors
 2. Apply prevention checklists from relevant error docs
+
+**Note:** Error doc checks happen at two points — (1) before writing code and (2) before committing (PHASE 3). The PHASE 3 check is the final gate to catch any missed violations.
 
 # FAIL-SAFE
 
