@@ -105,6 +105,26 @@ cp -r ai-dev-workflow/skills/* ~/.claude/skills/
 /instant-dev-flow commit
 ```
 
+## Changelog
+
+### 2026-03-16
+
+**instant-dev-flow** — 3 improvements based on real project usage:
+
+1. **Terminology: "Phase" vs "Step"**
+   - checklist.md now uses **"Step 0, Step 1, ..."** instead of "Phase 0, Phase 1, ..."
+   - "Phase" is reserved exclusively for the 7 workflow phases (Phase 1 Intake ~ Phase 7 Deliver)
+   - Prevents confusion between checklist implementation progress and workflow phase progress
+
+2. **Phase 5 Review — Documentation Status Sync (new step)**
+   - Added mandatory step to update status markers in all docs under `docs/`
+   - Covers: mvp-prd.md, spec.md, system-design.md, checklist.md, schema/
+   - Ensures docs reflect actual implementation state before code review
+
+3. **Implementation boundary guard**
+   - When all checklist steps are complete, `impl` now directs to Phase 5 Review instead of deployment
+   - Prevents skipping the review/test cycle
+
 ## License
 
 MIT

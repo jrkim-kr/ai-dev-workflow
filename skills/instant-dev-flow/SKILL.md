@@ -333,22 +333,24 @@ Output format:
 
 3. **Generate `docs/checklist.md`** (Unified Implementation Checklist):
 
-   > This replaces both plan.md and checklist.md — a single document that contains phase-by-phase implementation tasks with checkboxes.
+   > This replaces both plan.md and checklist.md — a single document that contains step-by-step implementation tasks with checkboxes.
+   >
+   > **IMPORTANT — Naming convention:** checklist.md uses **"Step"** (Step 0, Step 1, ...) for implementation units. **"Phase"** is reserved exclusively for the 7 workflow phases (Phase 1 Intake ~ Phase 7 Deliver). Never use "Phase" inside checklist.md to avoid confusion with workflow phases.
 
    ```markdown
    # [Project Name] — Implementation Checklist
 
    > Auto-generated from mvp-prd.md + spec.md | Last modified: [Date]
-   > Total N phases · Each phase is an independently functional unit
+   > Total N steps · Each step is an independently functional unit
 
    ## Usage
-   - Implement each phase in order; check items with `[x]` as completed
-   - Each phase has completion criteria that must be met before proceeding
-   - Order within steps: File creation → Feature operation → Data integrity
+   - Implement each step in order; check items with `[x]` as completed
+   - Each step has completion criteria that must be met before proceeding
+   - Order within tasks: File creation → Feature operation → Data integrity
 
    ---
 
-   ## Phase 0: Project Initial Setup
+   ## Step 0: Project Initial Setup
 
    ### 0-1. Project Creation
    - [ ] #1 Framework initialization (`npx create-next-app@latest`)
@@ -377,9 +379,9 @@ Output format:
 
    ---
 
-   ## Phase 1~N: [Feature Name]
+   ## Step 1~N: [Feature Name]
 
-   ### N-1. [Step Name]
+   ### N-1. [Task Group Name]
    - [ ] #NN [Task description] — `src/path/to/file`
    - [ ] #NN+1 [Task description]
    - [ ] #NN+2 [Verification: specific behavior]
@@ -388,7 +390,7 @@ Output format:
 
    ---
 
-   ## Final Phase: Deployment & Wrap-up
+   ## Final Step: Deployment & Wrap-up
 
    ### Deployment Configuration
    - [ ] #NN Vercel/hosting setup
@@ -419,15 +421,16 @@ Output format:
    ```
 
    **Checklist writing rules:**
-   - Each phase is an independently functional unit
-   - Phase 0 is always project initial setup
+   - Each step is an independently functional unit
+   - Step 0 is always project initial setup
    - Core user features first, admin features next
    - External integrations after core features
-   - Deployment/QA in final phase
-   - 3-5 check items per step
+   - Deployment/QA in final step
+   - 3-5 check items per task group
    - Sequential numbering (#N) across all items
    - Include file paths where applicable
    - Completion criteria must be specific and testable
+   - **Use "Step N" headings, never "Phase N"** — "Phase" is reserved for workflow phases only
 
 4. **Update `docs/workflow-state.md`** (Phase 3 = completed)
 
@@ -483,6 +486,7 @@ Frontend design uses **3 stages** instead of per-component skill chains:
 - If a specific step number is given as argument, implement only that step
 - If no argument, proceed sequentially from the next incomplete step
 - Document errors using `/instant-dev-flow commit` when they occur
+- **When all checklist steps are complete (including Final Step: Deployment & QA), do NOT proceed to deploy directly.** Instead, transition to workflow Phase 5 (Review) by prompting user to run `/instant-dev-flow review`. The checklist's "Final Step: Deployment & QA" build/lint checks can be run during `impl`, but actual deployment happens AFTER Phase 5 Review and Phase 6 Test pass.
 
 #### Step Completion Report Format
 ```
@@ -528,12 +532,21 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
    | [Feature from spec] | ✅ / ❌ / ⚠️ | ... |
    ```
 
-2. **Code Review:** Run `/code-review-expert` skill (single pass)
+2. **Documentation Status Sync:** Update status markers in **all** docs under `docs/` to reflect actual implementation state.
+   - `docs/mvp-prd.md` — Feature table Status column (❌→✅), Acceptance Criteria checkboxes, Traceability table
+   - `docs/spec.md` — Feature section headers, Page Map status, API status, Data Model status
+   - `docs/system-design.md` — Component architecture (❌ NEW → ✅), directory structure, data flow diagrams
+   - `docs/checklist.md` — Verify all implemented items are checked `[x]`, unchecked items match actual remaining work
+   - `docs/schema/` — schema-overview.md if DB models were added/changed
+   - Any other docs with status markers or "미구현/NEW/TODO" labels
+   - Do NOT ask user for permission — this is a mandatory review step, not optional.
+
+3. **Code Review:** Run `/code-review-expert` skill (single pass)
    - Covers: SOLID, security, maintainability, P0~P3 classification
    - Also checks: accessibility basics, performance anti-patterns, responsive issues
    - Do NOT separately run `/critique` or `/audit` — their key checks are covered here
 
-3. **Overall Assessment:**
+4. **Overall Assessment:**
    - **P0/P1 issues**: Guide to fix and re-review
    - **No P0/P1 issues + all features covered**: Update `workflow-state.md` (Phase 5 = completed)
 
@@ -733,6 +746,7 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
 4. **Incremental progress**: Do not run all phases at once. **Confirm with user only after Phase 1 (Intake) and Phase 3 (Plan)** — these are decision checkpoints. Other phases auto-proceed unless errors occur.
 5. **git pull first**: Sync latest code with `git pull` before starting any phase.
 6. **Apply project conventions**: All generated files follow the conventions defined in `references/`.
+7. **Terminology: "Phase" vs "Step"**: "Phase" (Phase 1~7) refers exclusively to the 7 workflow phases (Intake→Deliver). "Step" (Step 0, Step 1, ...) refers to implementation units inside `checklist.md`. Never mix these terms. This prevents confusion between checklist progress and workflow progress.
 
 ## Related Skill Mapping
 
