@@ -2,7 +2,7 @@
 name: instant-dev-flow
 description: "End-to-end project development workflow: Intake → Discover → Plan → Implement → Review → Test → Deliver. Manages 7 phases with continuous commit support. Integrates PRD generation, system design, frontend design skills, code review, testing, and delivery documentation."
 argument-hint: "[intake | discover | plan | impl | review | test | deliver | commit | status]"
-user-invokable: true
+user-invocable: true
 ---
 
 # Instant Dev Flow
@@ -90,28 +90,19 @@ Output format:
 #### Execution Steps
 
 1. **Collect project idea** from Notion or manual input
-2. **Generate Clarification Questions** using AskUserQuestion (up to 3 rounds, max 4 questions each):
-
-   **Round 1 — Problem & Users:**
-   - What specific problem does this solve? Who experiences it?
-   - Who are the target users? (roles, personas)
-   - What does success look like? (measurable outcomes)
-   - Are there existing solutions? What's wrong with them?
-
-   **Round 2 — Scope & Constraints:**
-   - What are the must-have features for MVP?
-   - What are explicit non-goals? (features to exclude)
-   - Timeline or deadline constraints?
-   - Budget or resource constraints?
-
-   **Round 3 — Technical & UX (dynamic based on Round 1-2):**
-   - Any preferred tech stack or existing infrastructure?
+2. **Quick Clarification** using AskUserQuestion (**1 round only**, max 5 questions):
+   - What problem does this solve and who are the target users?
+   - What are the must-have features for MVP? (and explicit non-goals)
+   - Any preferred tech stack, existing infrastructure, or integrations?
    - Key user flows to support?
-   - Integration requirements? (auth, payments, external APIs)
-   - Design preferences or brand guidelines?
+   - Timeline or deadline constraints?
 
-3. **Generate `docs/mvp-prd.md`** following the structure below
-4. **Create/update `docs/workflow-state.md`** (Phase 1 = completed)
+   > Keep it to 1 round. Infer reasonable defaults for anything not answered.
+
+3. **Generate `docs/mvp-prd.md` draft** following the structure below
+4. **Present PRD draft to user** for review — user can request changes inline
+   - Iterate on feedback until user confirms (this replaces multiple Q&A rounds)
+5. **Create/update `docs/workflow-state.md`** (Phase 1 = completed)
 
 #### mvp-prd.md Structure
 
@@ -240,15 +231,16 @@ Output format:
 1. **Project Structure Analysis:** Run `/project-structure analyze`
    - Parallel scan of all files + configs (package.json, tsconfig.json, etc.)
    - Detect framework, conventions, tech stack, monorepo indicators
-   - Identify structural issues (naming, organization, missing dirs)
-   - Use the analysis results to inform spec.md and system-design.md generation
+   - Use the analysis results to inform document generation
 
 2. **Update mvp-prd.md** if new insights from discovery require scope adjustments
    - Present changes to user for confirmation before updating
 
-3. **Generate `docs/spec.md`** (Feature Specification):
+3. **Generate `docs/spec.md` + `docs/system-design.md` together** (single pass):
 
-   Follow the structure from `/web-project-planner` skill — Document 1:
+   > Read mvp-prd.md + project structure analysis, then generate both documents in one step to avoid redundant analysis.
+
+   **spec.md** — Feature Specification (follow `/web-project-planner` Document 1):
    - System Overview (name, purpose, user types, tech stack)
    - Core State Flow (ASCII diagram + state definitions)
    - Per-Page/Feature Detailed Specification (inputs, behaviors, UI guide, constraints)
@@ -258,7 +250,7 @@ Output format:
    - Page Map (URL structure)
    - Future Expansion Considerations
 
-4. **Generate `docs/system-design.md`** (System Architecture):
+   **system-design.md** — System Architecture:
 
    ```markdown
    # [Project Name] — System Design Document
@@ -284,7 +276,7 @@ Output format:
    [ASCII diagram of data flow]
 
    ## 4. Directory Structure
-   [Based on Phase 0 analysis]
+   [Based on project structure analysis]
 
    ## 5. Key Design Decisions (ADR)
    ### ADR-001: [Decision Title]
@@ -295,11 +287,11 @@ Output format:
    ## 8. Deployment Architecture
    ```
 
-5. **Generate DB schema** (if applicable):
+4. **Generate DB schema** (if applicable):
    - Follow `/web-project-planner` Document 3 format
    - `docs/schema/migrations/` + `docs/schema/schema-overview.md`
 
-6. **Update `docs/workflow-state.md`** (Phase 2 = completed)
+5. **Update `docs/workflow-state.md`** (Phase 2 = completed)
 
 #### Completion Criteria
 - [ ] `docs/mvp-prd.md` updated (if needed)
@@ -462,27 +454,23 @@ Output format:
 5. Check off completed items in checklist.md with `[x]`
 6. Update `docs/workflow-state.md` (record current step)
 
-#### Frontend Implementation — Impeccable Design Flow
+#### Frontend Implementation — Streamlined Design Flow
 
-For frontend work, integrate the impeccable design skills in this order:
+Frontend design uses **3 stages** instead of per-component skill chains:
 
-| Order | Skill | When | Purpose |
-|-------|-------|------|---------|
-| 0 | `/teach-impeccable` | Once per project (Phase 0) | Establish persistent design guidelines |
-| 1 | `/frontend-design` | Each UI component/page | Core design — distinctive, production-grade UI |
-| 2 | `/adapt` | After core UI | Responsive design across devices |
-| 3 | `/normalize` | After adapt | Design system consistency |
-| 4 | `/optimize` | After normalize | Performance optimization |
-| 5 | `/harden` | After optimize | Error handling, i18n, edge cases |
-| 6 | `/clarify` | After harden | UX copy, labels, instructions |
-| 7 | `/polish` | Before shipping (last) | Final quality pass — alignment, spacing, details |
-| 8 | `/onboard` | If applicable | First-time user experience |
+| Stage | When | Skills | Purpose |
+|-------|------|--------|---------|
+| 0 | Once per project (Phase 0) | `/teach-impeccable` | Establish persistent design guidelines |
+| 1 | Each UI component/page | `/frontend-design` | Core design — distinctive, production-grade UI (already includes responsive + consistency) |
+| 2 | Once, after ALL pages built | `/adapt` + `/optimize` | Responsive polish + performance pass across entire app |
+| 3 | Once, before review | `/polish` | Final quality pass — alignment, spacing, details |
 
 **Frontend implementation rules:**
 - Run `/teach-impeccable` once during Phase 0 setup
-- For each page/component: `/frontend-design` → `/adapt` → `/normalize`
-- Run `/optimize`, `/harden`, `/clarify` after all components are built
-- Run `/polish` as the very last step before review
+- For each page/component: run `/frontend-design` only (it handles core design, layout, responsiveness)
+- After ALL components are built: run `/adapt` then `/optimize` once across the whole app
+- Run `/polish` once as the very last step before Phase 5 review
+- Do NOT run `/normalize`, `/harden`, `/clarify`, `/onboard` separately — their concerns are handled within `/frontend-design` and `/polish`
 
 #### Backend Implementation
 
@@ -522,7 +510,7 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
 
 #### Execution Steps
 
-1. **Product Review** (workflow-specific):
+1. **Product Review** (workflow-specific, done inline — no skill delegation):
    - Compare `docs/mvp-prd.md` acceptance criteria against implementation
    - Compare `docs/spec.md` features against implementation
 
@@ -540,19 +528,13 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
    | [Feature from spec] | ✅ / ❌ / ⚠️ | ... |
    ```
 
-2. **UX Design Review:** Run `/critique` skill
-   - Visual hierarchy, information architecture, emotional resonance
-   - Assess overall design quality with actionable feedback
+2. **Code Review:** Run `/code-review-expert` skill (single pass)
+   - Covers: SOLID, security, maintainability, P0~P3 classification
+   - Also checks: accessibility basics, performance anti-patterns, responsive issues
+   - Do NOT separately run `/critique` or `/audit` — their key checks are covered here
 
-3. **UI Quality Audit:** Run `/audit` skill
-   - Accessibility (a11y), performance, theming, responsive design
-   - Generates severity-rated issue report with recommendations
-
-4. **Code Review:** Run `/code-review-expert` skill
-   - Delegates SOLID, security, maintainability, P0~P3 classification
-
-5. **Overall Assessment:**
-   - **P0/P1 issues from any review**: Guide to fix and re-review
+3. **Overall Assessment:**
+   - **P0/P1 issues**: Guide to fix and re-review
    - **No P0/P1 issues + all features covered**: Update `workflow-state.md` (Phase 5 = completed)
 
 ---
@@ -748,7 +730,7 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
 1. **Phase skipping is prohibited**: Cannot proceed to next phase if previous phase is incomplete. Guide user to complete current phase.
 2. **State file must be updated**: Always update `workflow-state.md` when each phase starts/completes.
 3. **Follow related skill conventions**: Each phase follows the format and rules of its associated skill.
-4. **Incremental progress**: Do not run all phases at once. Confirm with user after each phase before proceeding.
+4. **Incremental progress**: Do not run all phases at once. **Confirm with user only after Phase 1 (Intake) and Phase 3 (Plan)** — these are decision checkpoints. Other phases auto-proceed unless errors occur.
 5. **git pull first**: Sync latest code with `git pull` before starting any phase.
 6. **Apply project conventions**: All generated files follow the conventions defined in `references/`.
 
@@ -760,12 +742,10 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
 | 2. Discover | `project-structure` | **Delegate**: Project structure analysis |
 | 2. Discover | `web-project-planner` | **Reference**: spec/system-design generation |
 | 3. Plan | — | **Self**: Cross-document validation + checklist generation |
-| 4. Implementation (Frontend) | `teach-impeccable`, `frontend-design`, `adapt`, `normalize`, `optimize`, `harden`, `clarify`, `polish`, `onboard` | **Delegate**: Design skills in sequence |
+| 4. Implementation (Frontend) | `teach-impeccable` (once), `frontend-design` (per page), `adapt` + `optimize` (once), `polish` (once) | **Delegate**: Streamlined 3-stage design flow |
 | 4. Implementation (Backend) | `dom-selector` | **Reference**: DOM selector rules |
 | 4. Implementation (Errors) | `issue-commit` (Phase 1) | **Reference**: Error documentation |
-| 5. Review | `critique` | **Delegate**: UX design evaluation |
-| 5. Review | `audit` | **Delegate**: Accessibility/performance/theming audit |
-| 5. Review | `code-review-expert` | **Delegate**: SOLID/security/quality review |
+| 5. Review | `code-review-expert` | **Delegate**: Unified code + quality review |
 | 6. Testing | `test-verify` | **Delegate**: Test generation/execution/verification |
 | 7. Deliver | `project-docs` | **Delegate**: Documentation sync & validation |
 | 7. Deliver | — | **Self**: Guide/README generation |
