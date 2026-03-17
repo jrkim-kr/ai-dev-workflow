@@ -1,18 +1,23 @@
 # AI Dev TF — Skill Review Brief
 
 > Prepared by: JR Kim (via Fathan)
-> Date: 2026-03-17
+> Date: 2026-03-17 (Updated)
 > Repo: https://github.com/jrkim-kr/ai-dev-workflow
 
 ---
 
 ## What I Built
 
-**`/instant-dev-flow`** — An end-to-end project development workflow skill for Claude Code that orchestrates 7 phases with 18 integrated sub-skills.
+**`/instant-dev-flow`** — An end-to-end project development workflow skill for Claude Code that orchestrates 7 phases with continuous commit support.
 
 ```
-Intake → Discover → Plan → Implement → Review → Test → Deliver
-  + continuous commit (anytime)
+Phase 1       Phase 2       Phase 3       Phase 4       Phase 5       Phase 6       Phase 7
+Intake     →  Discover   →  Plan       →  Implement  →  Review     →  Test       →  Deliver
+
+                        ┌─────────────────────────────────────┐
+                        │  commit (anytime): Error Doc / ADR  │
+                        │  / Git Commit Convention            │
+                        └─────────────────────────────────────┘
 ```
 
 ---
@@ -25,11 +30,11 @@ This IS a workflow agent skill. Here's what it does:
 
 | Phase | What Happens | Output |
 |-------|-------------|--------|
-| 1. Intake | Clarification Q&A → PRD generation | `docs/mvp-prd.md` |
-| 2. Discover | Codebase analysis → spec + architecture | `docs/spec.md`, `docs/system-design.md` |
+| 1. Intake | Clarification Q&A (1 round) → PRD generation | `docs/mvp-prd.md` |
+| 2. Discover | Codebase analysis → spec + architecture + DB schema | `docs/spec.md`, `docs/system-design.md`, `docs/schema/` |
 | 3. Plan | Cross-doc validation → implementation checklist | `docs/checklist.md` |
-| 4. Implement | Step-by-step coding with design skill chain | Working code |
-| 5. Review | Product review + UX critique + code review | Review report |
+| 4. Implement | Step-by-step coding with streamlined design flow | Working code |
+| 5. Review | Product review + doc status sync + code review | Review report, updated docs |
 | 6. Test | Unit/integration/E2E test generation & execution | `docs/test/test-report.md` |
 | 7. Deliver | Setup guides + README + doc sync | `docs/guides/`, `README.md` |
 | Commit | Error docs + ADR + git commit (anytime) | `errors/`, commits |
@@ -39,8 +44,14 @@ This IS a workflow agent skill. Here's what it does:
 - `workflow-state.md` tracks progress across sessions
 - Each phase delegates to specialized sub-skills (not monolithic)
 - Includes 8 reference files for team conventions (branch naming, commit format, PR templates, etc.)
+- **"Phase" vs "Step" terminology** — "Phase" (1~7) = workflow phases only; "Step" (0, 1, ...) = implementation units in checklist.md. Prevents confusion between workflow progress and implementation progress.
 
-### 2. claude.md Checker → `/project-docs` (Phase 4)
+**Recent improvements (2026-03-16):**
+1. **Terminology fix**: checklist.md uses "Step 0, Step 1, ..." instead of "Phase 0, Phase 1, ..."
+2. **Phase 5 doc sync**: Mandatory documentation status sync before code review — updates status markers across all docs under `docs/`
+3. **Implementation boundary guard**: When all checklist steps are complete, `impl` directs to Phase 5 Review instead of deployment — prevents skipping review/test cycle
+
+### 2. claude.md Checker → `/project-docs` (Phase 7)
 
 The `/project-docs` skill already has document validation logic:
 
@@ -63,20 +74,41 @@ The `/project-docs` skill already has document validation logic:
 
 ```
 instant-dev-flow (orchestrator)
-├── prd                     ← PRD generation
-├── project-structure       ← Codebase analysis
-├── web-project-planner     ← spec/design/checklist generation
-├── frontend-design chain   ← 9 design skills (teach-impeccable → polish)
-├── code-review-expert      ← SOLID/security review
-├── critique                ← UX design evaluation
-├── audit                   ← a11y/performance audit
-├── test-verify             ← Test generation/execution
-├── project-docs            ← Doc sync & validation
-├── issue-commit            ← Git commit workflow
+├── prd                     ← PRD generation (Phase 1 reference)
+├── project-structure       ← Codebase analysis (Phase 2 delegate)
+├── web-project-planner     ← spec/design/checklist generation (Phase 2 reference)
+├── frontend-design flow    ← Streamlined 3-stage design (Phase 4)
+│   ├── teach-impeccable    ← Once per project (design guidelines)
+│   ├── frontend-design     ← Per page/component (core design)
+│   ├── adapt + optimize    ← Once after all pages built
+│   └── polish              ← Once before review (final pass)
+├── code-review-expert      ← Unified code + quality review (Phase 5)
+├── test-verify             ← Test generation/execution (Phase 6)
+├── project-docs            ← Doc sync & validation (Phase 7)
+├── issue-commit            ← Git commit workflow (continuous)
+├── dom-selector            ← DOM selector rules (Phase 4 reference)
 └── references/             ← 8 convention files
 ```
 
+**Design flow simplification:** Previously called 9 separate design skills per component. Now uses a **streamlined 3-stage approach** — `/frontend-design` handles core design per page, then `/adapt` + `/optimize` + `/polish` run once across the whole app. Skills like `/normalize`, `/harden`, `/clarify`, `/onboard` are no longer called separately (their concerns are covered by `/frontend-design` and `/polish`).
+
 All skills are **independently usable** — you don't need the full workflow to use `/prd` or `/code-review-expert` alone.
+
+---
+
+## Phase 5 Review — New Doc Sync Step
+
+This is a notable addition. Before running code review, Phase 5 now **mandatorily updates status markers** in all docs:
+
+| Document | What Gets Updated |
+|----------|-------------------|
+| `mvp-prd.md` | Feature table Status column (❌→✅), Acceptance Criteria checkboxes |
+| `spec.md` | Feature section headers, Page Map status, API status |
+| `system-design.md` | Component architecture (❌ NEW → ✅), directory structure |
+| `checklist.md` | Verify all implemented items are checked `[x]` |
+| `schema/` | schema-overview.md if DB models changed |
+
+This ensures docs reflect actual implementation state before code review happens.
 
 ---
 
@@ -94,7 +126,11 @@ All skills are **independently usable** — you don't need the full workflow to 
    - The `references/` folder has ready-to-use conventions
    - Which ones should be mandatory vs. recommended?
 
-4. **Next steps**
+4. **Design flow trade-offs**
+   - Streamlined 3-stage vs. full 9-skill chain — is there a use case for the full chain?
+   - Should `/critique` and `/audit` be optional add-ons for specific projects?
+
+5. **Next steps**
    - Review the repo: https://github.com/jrkim-kr/ai-dev-workflow
    - Try running `/instant-dev-flow intake` on a sample project
    - Decide what to keep, modify, or discard before merging
