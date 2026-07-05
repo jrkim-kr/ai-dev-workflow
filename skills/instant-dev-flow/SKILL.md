@@ -717,7 +717,7 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
 #### Execution Steps
 
 1. **Error Documentation** (when fixing bugs):
-   - Create `errors/ERR-NNN-description.md` following `/issue-commit` Phase 1 format
+   - Create `errors/ERR-NNN-description.md` following `/flush` Phase 1 format
    - Include: Summary, Root Cause, Reproduction Steps, Solution, Prevention Checklist
 
 2. **ADR Documentation** (when making architectural decisions):
@@ -732,7 +732,7 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
    - **Status:** Accepted / Superseded by ADR-NNN
    ```
 
-3. **Git Commit:** Delegate to `/issue-commit` skill
+3. **Git Commit:** Delegate to `/flush` plugin command
    - Follows commit convention (see `references/commit-convention.md`)
    - Follows branch convention (see `references/branch-convention.md`)
 
@@ -758,12 +758,12 @@ Step [N+1]: [name] → `/instant-dev-flow impl [N+1]`
 | 3. Plan | — | **Self**: Cross-document validation + checklist generation |
 | 4. Implementation (Frontend) | `teach-impeccable` (once), `frontend-design` (per page), `adapt` + `optimize` (once), `polish` (once) | **Delegate**: Streamlined 3-stage design flow |
 | 4. Implementation (Backend) | `dom-selector` | **Reference**: DOM selector rules |
-| 4. Implementation (Errors) | `issue-commit` (Phase 1) | **Reference**: Error documentation |
+| 4. Implementation (Errors) | `flush` (Phase 1) | **Reference**: Error documentation |
 | 5. Review | `code-review-expert` | **Delegate**: Unified code + quality review |
 | 6. Testing | `test-verify` | **Delegate**: Test generation/execution/verification |
 | 7. Deliver | `project-docs` | **Delegate**: Documentation sync & validation |
 | 7. Deliver | — | **Self**: Guide/README generation |
-| Commit (continuous) | `issue-commit` | **Delegate**: git commit workflow |
+| Commit (continuous) | `flush` | **Delegate**: git commit workflow |
 
 ## Docs Directory Structure
 
